@@ -6,7 +6,7 @@
 - 実験ログ、チェックポイント、解析結果を再利用可能な形で整理する。
 
 ## 2. 前提・依存関係
-- **データ**：`ARC-AGI-2` 配布物の `train.jsonl` / `validation.jsonl` / `test.jsonl` を `data/raw/` に配置済みであること。
+- **データ**：`ARC-AGI-2` 配布物の JSON ディレクトリ（`training/*.json`, `evaluation/*.json` など）または JSONL ファイルを `data/raw/` 相当のパスに配置済みであること。
 - **ハードウェア**：単一 GPU（16GB 以上推奨、AMP/BF16 が利用可能）と十分なストレージ。
 - **ソフトウェア**：PyTorch 2.2 以降、`torchvision`、`numpy`、`scikit-learn`、`hydra`、`tensorboard` 等の依存パッケージ。
 - **設定管理**：`configs/` ディレクトリに Hydra 形式の設定群を用意し、`logs/` に前処理・学習ログ、`checkpoints/` にモデルを保存する。
@@ -14,10 +14,11 @@
 ## 3. 実装タスク詳細
 ### 3.1 データ準備
 1. `src/data/raw_loader.py`
-   - ARC-AGI-2 の JSONL からタスクを読み出し、入出力グリッドとメタデータを Python オブジェクトへ変換するローダーを実装。
+   - ARC-AGI-2 の JSON ディレクトリ（`training/*.json` など）および JSONL 配布形式の両方からタスクを読み出し、入出力グリッドとメタデータを Python オブジェクトへ変換するローダーを実装。
    - 乱数シード `20250214` を用いた再現性確保。
 2. `src/data/preprocess.py`
    - K-shot 整形、`data/processed/{task_id}.json` 書き出し、`data/splits/` 配下ファイル生成（`val_tasks.json`, `meta_eval_test.json`, `kshot_indices/`）。
+   - タスクごとのシードを BLAKE2b で派生させ、K-shot の抽出順を安定化。
    - 実行ログを `logs/data_preparation.log` に追記し、使用設定を `configs/data_prep.yaml` に保持。
 3. ユニットテスト：`tests/test_data_pipeline.py` を作成し、サンプルタスクのロード・整形結果を検証。
 
