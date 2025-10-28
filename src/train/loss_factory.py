@@ -24,6 +24,7 @@ class LossFactoryConfig:
     task_loss_type: str = "cross_entropy"
     task_ignore_index: int = -100
     task_label_smoothing: float = 0.0
+    task_exact_match_weight: float = 0.1
     sae_recon_weight: float = 1.0
     sae_l1_weight: float = 1e-3
     sae_target_sparsity: float = 0.05
@@ -47,6 +48,7 @@ class LossFactory:
             loss_type=config.task_loss_type,
             ignore_index=config.task_ignore_index,
             label_smoothing=config.task_label_smoothing,
+            exact_match_weight=config.task_exact_match_weight,
         )
         self.sae_loss = SAELoss(
             recon_weight=config.sae_recon_weight,
