@@ -60,7 +60,7 @@
 
 ### 3.5 評価・メトリクス
 1. `src/eval/metrics.py`
-   - タスク単位 Top-1/Top-3、ピクセル Accuracy、IoU を実装。
+   - タスク単位 Top-1/Top-3、ピクセル Accuracy、IoU 、厳密一致率を実装。
 2. `src/eval/ic_evaluator.py`
    - 未見タスクに対する In-Context 推論を実施し、指標を集計するスクリプト。
 3. `src/scripts/run_eval.py`
