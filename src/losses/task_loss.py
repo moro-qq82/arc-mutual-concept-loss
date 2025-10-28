@@ -27,6 +27,7 @@ class TaskLoss(nn.Module):
         loss_type: str = "cross_entropy",
         ignore_index: int = -100,
         label_smoothing: float = 0.0,
+        exact_match_weight: float = 0.1,
     ) -> None:
         super().__init__()
         supported = {"cross_entropy", "pixel_accuracy"}
@@ -35,6 +36,7 @@ class TaskLoss(nn.Module):
         self.loss_type = loss_type
         self.ignore_index = ignore_index
         self.label_smoothing = label_smoothing
+        self.exact_match_weight = exact_match_weight
 
     def forward(
         self,
@@ -64,9 +66,9 @@ class TaskLoss(nn.Module):
         valid_targets = targets_flat != self.ignore_index
 
         if logits_flat.shape[0] == 0:
-            loss = logits.new_tensor(0.0)
+            base_loss = logits.new_tensor(0.0)
         elif self.loss_type == "cross_entropy":
-            loss = F.cross_entropy(
+            base_loss = F.cross_entropy(
                 logits_flat,
                 targets_flat,
                 ignore_index=self.ignore_index,
@@ -81,7 +83,24 @@ class TaskLoss(nn.Module):
                 accuracy = correct.mean()
             else:
                 accuracy = torch.tensor(0.0, device=logits.device)
-            loss = 1.0 - accuracy
+            base_loss = 1.0 - accuracy
+
+        with torch.no_grad():
+            predictions_full = logits.argmax(dim=2)
+            valid_positions = targets != self.ignore_index
+            if mask is not None:
+                valid_positions = valid_positions & (mask > 0)
+            per_pixel_correct = (predictions_full == targets) | (~valid_positions)
+            batch, queries = targets.shape[:2]
+            per_example_correct = per_pixel_correct.reshape(batch, queries, -1).all(dim=-1)
+            has_valid = valid_positions.reshape(batch, queries, -1).any(dim=-1)
+            if has_valid.any():
+                exact_match_rate = per_example_correct[has_valid].float().mean()
+            else:
+                exact_match_rate = logits.new_tensor(0.0)
+            exact_match_loss = 1.0 - exact_match_rate
+
+        loss = base_loss + self.exact_match_weight * exact_match_loss
 
         metrics = {
             "task_loss": loss.detach(),
@@ -98,6 +117,8 @@ class TaskLoss(nn.Module):
                 else:
                     pixel_accuracy = torch.tensor(0.0, device=logits.device)
             metrics["pixel_accuracy"] = pixel_accuracy
+            metrics["exact_match_rate"] = exact_match_rate
+            metrics["exact_match_loss"] = exact_match_loss
 
         return TaskLossOutput(loss=loss, metrics=metrics)
 
