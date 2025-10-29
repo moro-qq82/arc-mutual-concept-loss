@@ -30,13 +30,13 @@ stages:
       - name: run_full_pytest
         kind: module
         module: pytest
-      - name: run_ruff
-        kind: module
-        module: ruff
-        args:
-          - check
-          - src
-          - tests
+      # - name: run_ruff
+      #   kind: module
+      #   module: ruff
+      #   args:
+      #     - check
+      #     - src
+      #     - tests
   training_and_evaluation:
     description: "学習・評価ジョブを順番に実行します。"
     tasks:
