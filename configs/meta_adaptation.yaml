@@ -1,0 +1,46 @@
+# few-shotメタ適応の実行設定
+
+data:
+  processed_dir: data/processed
+  splits_dir: data/splits
+  batch_size: 1
+  num_workers: 0
+  pin_memory: false
+
+model:
+  checkpoint_path: checkpoints/ic_model.pt
+  kwargs: {}
+
+loss:
+  task_loss_type: cross_entropy
+  task_exact_match_weight: 0.1
+  sae_recon_weight: 1.0
+  sae_l1_weight: 0.001
+  alpha: 1.0
+  beta: 1.0
+
+adapter:
+  mode: lora
+  rank: 8
+  alpha: 16.0
+  dropout: 0.05
+  bottleneck_dim: 64
+  target_modules:
+    - context_encoder
+    - decoder
+
+meta_adaptation:
+  max_steps: 200
+  learning_rate: 0.0005
+  weight_decay: 0.0
+  warmup_steps: 10
+  min_lr_ratio: 0.1
+  gradient_clip: 1.0
+  log_interval: 25
+  eval_interval: 50
+  use_amp: true
+  amp_dtype: bf16
+  history_dir: logs/meta_adaptation
+
+output:
+  report_path: reports/meta_adaptation/meta_eval.json
