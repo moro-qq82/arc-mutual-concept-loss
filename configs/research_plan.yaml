@@ -1,0 +1,88 @@
+default_cwd: ..
+stages:
+  data_preparation:
+    description: "データ取得と前処理パイプラインを実行します。"
+    tasks:
+      - name: ensure_logs_directory
+        kind: mkdir
+        directory: ../logs
+      - name: ensure_reports_directories
+        kind: mkdir
+        directory: ../reports/metrics
+      - name: run_data_preparation
+        kind: module
+        module: src.data.preprocess
+        args:
+          - --config
+          - configs/data_prep.yaml
+      - name: run_data_tests
+        kind: command
+        command:
+          - {python}
+          - -m
+          - pytest
+          - tests/test_data_pipeline.py
+      - name: log_data_preparation
+        kind: log
+        log_file: ../logs/data_preparation.log
+        message: "データ前処理スクリプトを完了しました (config={config_dir}/data_prep.yaml)"
+  quality_checks:
+    description: "実験前に基本的なテストとLintを実行します。"
+    tasks:
+      - name: run_full_pytest
+        kind: command
+        command:
+          - {python}
+          - -m
+          - pytest
+      - name: run_ruff
+        kind: command
+        command:
+          - {python}
+          - -m
+          - ruff
+          - check
+          - src
+          - tests
+  training_and_evaluation:
+    description: "学習・評価ジョブを順番に実行します。"
+    tasks:
+      - name: ensure_checkpoint_directory
+        kind: mkdir
+        directory: ../reports/checkpoints
+      - name: ensure_ablation_directory
+        kind: mkdir
+        directory: ../reports/ablations
+      - name: run_training_suite
+        kind: module
+        module: src.scripts.run_ablations
+        args:
+          - --configs-dir
+          - configs/ablations
+          - --summary-path
+          - reports/ablations/summary.json
+      - name: run_eval
+        kind: module
+        module: src.scripts.run_eval
+        args:
+          - --config
+          - configs/eval.yaml
+      - name: run_meta_adaptation
+        kind: module
+        module: src.scripts.run_meta_adaptation
+        args:
+          - --config
+          - configs/meta_adaptation.yaml
+  analysis_and_reporting:
+    description: "レポート用ディレクトリ整備とログ記録を行います。"
+    tasks:
+      - name: ensure_weekly_reports
+        kind: mkdir
+        directory: ../reports/weekly
+      - name: ensure_findings_doc
+        kind: mkdir
+        directory: ../docs
+      - name: log_reporting
+        kind: log
+        log_file: ../logs/reporting.log
+        message: "レポート更新準備を完了しました"

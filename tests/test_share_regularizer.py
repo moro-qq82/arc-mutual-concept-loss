@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import torch
 import pytest
+
+torch = pytest.importorskip("torch")
 
 from src.losses.share_regularizer import ShareSubspaceRegularizer
 

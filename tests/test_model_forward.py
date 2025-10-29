@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-import torch
+import pytest
+
+torch = pytest.importorskip("torch")
 
 from src.models.ic_model import ARCInContextModel
 
