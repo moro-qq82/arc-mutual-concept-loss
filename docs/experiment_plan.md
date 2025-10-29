@@ -38,7 +38,8 @@ created by gemini 2.5 pro
 - **データ**：**ARC-AGI-2データセット**。
   - 各サンプルは1つの「タスク」であり、K個（例：3〜5個）の「学習例ペア（入力グリッド、出力グリッド）」と1個の「テスト入力グリッド」から成る。
   - 目標は「テスト出力グリッド」を正確に予測すること。
-  - 公式提供の `train.jsonl`（学習）、`validation.jsonl`（検証）、`test.jsonl`（評価）のスプリットを採用し、追加の独自分割は後述のルールに従って作成する。
+  - 公式配布物は `arc-agi_{split}_challenges.json`（タスク記述）と `arc-agi_{split}_solutions.json`（テスト出力、*training/evaluationのみ*）のペアで提供される。`split` には `training`、`evaluation`、`test` が入る。テストスプリットには解答ファイルが付与されないため、評価用指標を算出する際は `training` と `evaluation` を利用する。
+  - 追加の独自分割は後述のルールに従って作成する。
 - **モデル**：**K-shot In-Context Learningモデル**（例：小型Transformer）。
   - **Grid Encoder** (例: CNN) が各グリッドをベクトル化。
   - **Context Encoder** (例: Transformer) がK個の学習例ペア `(in_1, out_1), ..., (in_K, out_K)` を処理し、**タスク表現 $h_{task}$** を抽出する。
@@ -113,7 +114,7 @@ created by gemini 2.5 pro
     - SAEの $z$ とタスクの（人間による）カテゴリ分類との相関・活性ヒートマップ。
 
 ### データ準備手順
-1. **公式スプリットの取得**：ARC-AGI-2配布物に含まれる `train.jsonl`、`validation.jsonl`、`test.jsonl` を `data/raw/` に配置し、ファイル構造を変更しない。
+1. **公式スプリットの取得**：ARC-AGI-2配布物に含まれる `arc-agi_{split}_challenges.json` と `arc-agi_{split}_solutions.json`（`split` は `training`、`evaluation`、`test`）を `data/raw/` に配置する。`test` スプリットには解答が存在しない点に注意する。
 2. **検証タスクIDの固定化**：`validation.jsonl` 内のタスクIDを昇順に並べたリストを生成し、`data/splits/val_tasks.json` として保存する。学習・評価スクリプトではこのリストを読み込み、検証順序とバッチングを固定する。
 3. **メタ適応用テストサブセット**：未見タスクの評価対象として `test.jsonl` から指定数（例：100件）のタスクを抽出する。抽出時はPythonの `random`、`numpy.random`、`torch` にシード `20250214` を設定し、重複なしでサンプリングした結果を `data/splits/meta_eval_test.json` に保存する。
 4. **K-shot例の整形**：各タスクに含まれる学習例ペアを、入出力グリッドの配列とメタデータをまとめた辞書形式に変換し、`data/processed/{task_id}.json` として書き出す。例数がKを超える場合は後述のルールに従いサブサンプリングした上で保存する。

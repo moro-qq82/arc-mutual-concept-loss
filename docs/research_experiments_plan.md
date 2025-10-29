@@ -21,7 +21,7 @@
 
 ## 2. データ前処理手順
 1. **生データ取得**
-   - ARC-AGI-2 の公式配布物から `train.jsonl`、`validation.jsonl`、`test.jsonl` を取得し、`data/raw/` に配置する。
+   - ARC-AGI-2 の公式配布物から `arc-agi_{split}_challenges.json` と `arc-agi_{split}_solutions.json`（`split` は `training`、`evaluation`、`test`）を取得し、`data/raw/` に配置する。`test` スプリットには解答が含まれないため、評価指標算出には `training`/`evaluation` を用いる。
    - 取得元URL、ダウンロード日、整合性チェック（ハッシュ値など）を `logs/data_acquisition.log` に追記する。
 2. **分割・サンプリング準備**
    - 検証タスクIDリストを生成し `data/splits/val_tasks.json` として保存。
