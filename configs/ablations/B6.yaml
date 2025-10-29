@@ -1,0 +1,48 @@
+name: B6
+label: 共有サブスペース次元スイープ
+description: |
+  共有サブスペースのランクと正則化強度の組み合わせを評価する設定。rank kとαを同時に変更する。
+train:
+  base_config: configs/train.yaml
+  overrides:
+    seed: 20250214
+variants:
+  - id: k8_alpha005
+    description: |
+      ランク8かつα=0.05の組み合わせ。軽めの共有制約を基準とする。
+    overrides:
+      loss:
+        share_rank: 8
+        alpha: 0.05
+      trainer:
+        checkpoint_dir: checkpoints/ablations/B6_k8_a005
+        tensorboard_dir: logs/train/ablations/B6_k8_a005/tensorboard
+        history_path: logs/train/ablations/B6_k8_a005/history.jsonl
+      output:
+        report_path: reports/ablations/B6_k8_a005.json
+  - id: k16_alpha01
+    description: |
+      ランク16かつα=0.1。共有サブスペース次元を倍にした場合の影響を確認する。
+    overrides:
+      loss:
+        share_rank: 16
+        alpha: 0.1
+      trainer:
+        checkpoint_dir: checkpoints/ablations/B6_k16_a01
+        tensorboard_dir: logs/train/ablations/B6_k16_a01/tensorboard
+        history_path: logs/train/ablations/B6_k16_a01/history.jsonl
+      output:
+        report_path: reports/ablations/B6_k16_a01.json
+  - id: k32_alpha02
+    description: |
+      ランク32かつα=0.2。最も強い共有制約の挙動を観察する。
+    overrides:
+      loss:
+        share_rank: 32
+        alpha: 0.2
+      trainer:
+        checkpoint_dir: checkpoints/ablations/B6_k32_a02
+        tensorboard_dir: logs/train/ablations/B6_k32_a02/tensorboard
+        history_path: logs/train/ablations/B6_k32_a02/history.jsonl
+      output:
+        report_path: reports/ablations/B6_k32_a02.json

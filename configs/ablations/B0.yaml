@@ -1,0 +1,19 @@
+name: B0
+label: ベースライン
+description: |
+  共有サブスペース正則化と疎オートエンコーダを完全に無効化したベースライン設定。
+train:
+  base_config: configs/train.yaml
+  overrides:
+    seed: 20250214
+    loss:
+      alpha: 0.0
+      beta: 0.0
+      sae_recon_weight: 0.0
+      sae_l1_weight: 0.0
+    trainer:
+      checkpoint_dir: checkpoints/ablations/B0
+      tensorboard_dir: logs/train/ablations/B0/tensorboard
+      history_path: logs/train/ablations/B0/history.jsonl
+    output:
+      report_path: reports/ablations/B0.json

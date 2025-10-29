@@ -1,0 +1,20 @@
+name: B3
+label: SAE非疎化
+description: |
+  疎性を強制せず再構成のみを学習させる疎オートエンコーダの挙動を確認する設定。
+train:
+  base_config: configs/train.yaml
+  overrides:
+    seed: 20250214
+    loss:
+      alpha: 1.0
+      beta: 1.0
+      sae_l1_weight: 0.0
+      sae_activation_threshold: 0.0
+      sae_target_sparsity: 1.0
+    trainer:
+      checkpoint_dir: checkpoints/ablations/B3
+      tensorboard_dir: logs/train/ablations/B3/tensorboard
+      history_path: logs/train/ablations/B3/history.jsonl
+    output:
+      report_path: reports/ablations/B3.json
