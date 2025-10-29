@@ -1,0 +1,22 @@
+# 評価設定
+
+data:
+  processed_dir: data/processed
+  splits_dir: data/splits
+  batch_size: 2
+  num_workers: 2
+  pin_memory: true
+  persistent_workers: false
+  drop_last: false
+  shuffle_train: false
+  ignore_index: -100
+
+evaluation:
+  checkpoint_path: checkpoints/latest.pt
+  output_path: reports/ic_eval/latest.json
+  split: test
+  device: null
+  max_batches: null
+  save_predictions: false
+  predictions_dir: null
+  model: {}
