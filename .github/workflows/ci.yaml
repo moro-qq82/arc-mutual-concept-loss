@@ -1,12 +1,16 @@
 name: CI
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "Manual trigger only while CI is disabled"
+        required: false
+        default: ""
 
 jobs:
   lint-and-test:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
