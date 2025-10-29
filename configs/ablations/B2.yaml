@@ -1,0 +1,19 @@
+name: B2
+label: 共有正則化のみ
+description: |
+  疎オートエンコーダの損失を無効化し、共有サブスペース正則化のみを残した設定。
+train:
+  base_config: configs/train.yaml
+  overrides:
+    seed: 20250214
+    loss:
+      alpha: 0.1
+      beta: 0.0
+      share_activation_threshold: 0.0005
+      share_min_group_size: 3
+    trainer:
+      checkpoint_dir: checkpoints/ablations/B2
+      tensorboard_dir: logs/train/ablations/B2/tensorboard
+      history_path: logs/train/ablations/B2/history.jsonl
+    output:
+      report_path: reports/ablations/B2.json

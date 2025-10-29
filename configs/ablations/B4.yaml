@@ -1,0 +1,33 @@
+name: B4
+label: メタ適応全層微調整近似
+description: |
+  few-shotメタ適応においてLoRA/Adapterへ依存せずほぼ全層を更新するケースを近似的に評価する設定。
+train:
+  base_config: configs/train.yaml
+  overrides:
+    seed: 20250214
+    data:
+      batch_size: 3
+      shuffle_train: true
+    trainer:
+      checkpoint_dir: checkpoints/ablations/B4
+      tensorboard_dir: logs/train/ablations/B4/tensorboard
+      history_path: logs/train/ablations/B4/history.jsonl
+    output:
+      report_path: reports/ablations/B4.json
+meta_adaptation:
+  base_config: configs/meta_adaptation.yaml
+  overrides:
+    adapter:
+      mode: adapter
+      bottleneck_dim: 256
+      dropout: 0.0
+      target_modules:
+        - context_encoder
+        - decoder
+    meta_adaptation:
+      max_steps: 400
+      learning_rate: 0.0002
+      eval_interval: 100
+    output:
+      report_path: reports/meta_adaptation/ablations/B4.json

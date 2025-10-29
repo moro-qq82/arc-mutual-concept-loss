@@ -1,0 +1,48 @@
+name: B5
+label: コンテキストエンコーダ比較
+description: |
+  コンテキストエンコーダの容量・構造差分による影響を比較する設定。Transformer構造のパラメータを変化させて擬似的にアーキテクチャ差を再現する。
+train:
+  base_config: configs/train.yaml
+  overrides:
+    seed: 20250214
+variants:
+  - id: transformer
+    description: |
+      既定のTransformer構成をそのまま用いた比較用リファレンス。
+    overrides:
+      trainer:
+        checkpoint_dir: checkpoints/ablations/B5_transformer
+        tensorboard_dir: logs/train/ablations/B5_transformer/tensorboard
+        history_path: logs/train/ablations/B5_transformer/history.jsonl
+      output:
+        report_path: reports/ablations/B5_transformer.json
+  - id: lightweight
+    description: |
+      コンテキストエンコーダの層数とヘッド数を削減した軽量Transformerの挙動を確認する。
+    overrides:
+      model:
+        context_layers: 2
+        context_heads: 4
+        dropout: 0.2
+      trainer:
+        checkpoint_dir: checkpoints/ablations/B5_lightweight
+        tensorboard_dir: logs/train/ablations/B5_lightweight/tensorboard
+        history_path: logs/train/ablations/B5_lightweight/history.jsonl
+      output:
+        report_path: reports/ablations/B5_lightweight.json
+  - id: single_head
+    description: |
+      単一ヘッドかつ中間次元を縮小した疑似GRUスタイル表現の効果を調べる。
+    overrides:
+      model:
+        context_layers: 3
+        context_heads: 1
+        context_model_dim: 192
+        dropout: 0.15
+      trainer:
+        checkpoint_dir: checkpoints/ablations/B5_single_head
+        tensorboard_dir: logs/train/ablations/B5_single_head/tensorboard
+        history_path: logs/train/ablations/B5_single_head/history.jsonl
+      output:
+        report_path: reports/ablations/B5_single_head.json
