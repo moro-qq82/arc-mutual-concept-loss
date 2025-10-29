@@ -60,6 +60,36 @@ def challenge_solution_dataset(tmp_path: Path) -> Path:
     return data_root
 
 
+@pytest.fixture
+def challenge_solution_list_dataset(tmp_path: Path) -> Path:
+    data_root = tmp_path / "arc_list"
+    data_root.mkdir(parents=True)
+
+    challenge_payload = [
+        {
+            "task_id": "task_list",
+            "train": [
+                {"input": [[0]], "output": [[1]]},
+                {"input": [[1]], "output": [[2]]},
+            ],
+            "test": [
+                {"input": [[2]]},
+                {"input": [[3]]},
+            ],
+        }
+    ]
+    solution_payload = [
+        {"task_id": "task_list", "outputs": [[[3]], [[4]]]},
+    ]
+
+    with (data_root / "arc-agi_training_challenges.json").open("w", encoding="utf-8") as fh:
+        json.dump(challenge_payload, fh)
+    with (data_root / "arc-agi_training_solutions.json").open("w", encoding="utf-8") as fh:
+        json.dump(solution_payload, fh)
+
+    return data_root
+
+
 def test_load_arc_tasks_from_directory(sample_dataset: Path) -> None:
     tasks = load_arc_tasks(sample_dataset, "training")
     assert "task_a" in tasks
@@ -73,6 +103,17 @@ def test_load_arc_tasks_from_challenge_solution(challenge_solution_dataset: Path
     tasks = load_arc_tasks(challenge_solution_dataset, "training")
     assert "task_c" in tasks
     task = tasks["task_c"]
+    assert len(task.test) == 2
+    assert task.test[0].output == [[3]]
+    assert task.test[1].output == [[4]]
+
+
+def test_load_arc_tasks_from_challenge_solution_list(
+    challenge_solution_list_dataset: Path,
+) -> None:
+    tasks = load_arc_tasks(challenge_solution_list_dataset, "training")
+    assert "task_list" in tasks
+    task = tasks["task_list"]
     assert len(task.test) == 2
     assert task.test[0].output == [[3]]
     assert task.test[1].output == [[4]]
@@ -119,3 +160,29 @@ def test_prepare_data_pipeline_outputs(tmp_path: Path, sample_dataset: Path) -> 
     assert "Prepared" in log_text
 
     assert summary["train_tasks"] == ["task_a"]
+
+
+def test_prepare_pipeline_handles_insufficient_train(
+    tmp_path: Path, challenge_solution_dataset: Path
+) -> None:
+    config = DataPrepConfig(
+        raw_data_dir=challenge_solution_dataset,
+        processed_dir=tmp_path / "processed",
+        splits_dir=tmp_path / "splits",
+        kshot_indices_dir=tmp_path / "splits" / "kshot",
+        log_file=tmp_path / "logs" / "data.log",
+        k_shot=3,
+        val_fraction=0.5,
+        seed=20250214,
+        meta_eval_split="evaluation",
+    )
+
+    prepare_data_pipeline(config)
+
+    processed_file = config.processed_dir / "task_c.json"
+    payload = json.loads(processed_file.read_text(encoding="utf-8"))
+    assert len(payload["k_shot_examples"]) == 2
+
+    kshot_file = config.kshot_indices_dir / "task_c.json"
+    indices = json.loads(kshot_file.read_text(encoding="utf-8"))
+    assert indices["indices"] == [0, 1]

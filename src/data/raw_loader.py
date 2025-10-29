@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+from collections.abc import Sequence as ABCSequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
@@ -86,6 +87,110 @@ def _normalize_test_examples(
     return normalized
 
 
+def _normalize_task_collection(
+    raw_tasks: object,
+    *,
+    source: Path,
+    kind: str,
+) -> Dict[str, Mapping[str, Any]]:
+    """Convert heterogeneous task containers into a task-id keyed mapping."""
+
+    def _is_sequence(value: object) -> bool:
+        return isinstance(value, ABCSequence) and not isinstance(value, (str, bytes, bytearray))
+
+    tasks: Dict[str, Mapping[str, Any]] = {}
+    if isinstance(raw_tasks, Mapping):
+        for task_id, payload in raw_tasks.items():
+            if not isinstance(payload, Mapping):
+                raise TypeError(
+                    f"Task '{task_id}' payload in {source} must be a mapping, "
+                    f"found {type(payload).__name__}."
+                )
+            tasks[str(task_id)] = payload
+        return tasks
+
+    if _is_sequence(raw_tasks):
+        for index, entry in enumerate(raw_tasks):
+            if not isinstance(entry, Mapping):
+                raise TypeError(
+                    f"Entry {index} in {source} for {kind} tasks must be a mapping, "
+                    f"found {type(entry).__name__}."
+                )
+            task_id = entry.get("task_id") or entry.get("id") or entry.get("name")
+            if not task_id:
+                raise KeyError(
+                    f"Entry {index} in {source} for {kind} tasks is missing a task identifier."
+                )
+            payload: Mapping[str, Any]
+            if "task" in entry and isinstance(entry["task"], Mapping):
+                payload = entry["task"]  # type: ignore[assignment]
+            else:
+                payload = {k: v for k, v in entry.items() if k not in {"task_id", "id", "name"}}
+            tasks[str(task_id)] = payload
+        return tasks
+
+    raise TypeError(
+        f"Unsupported container type '{type(raw_tasks).__name__}' for ARC tasks in {source}."
+    )
+
+
+def _normalize_solution_collection(
+    raw_solutions: object,
+    *,
+    source: Path,
+) -> Dict[str, Sequence[List[List[int]]]]:
+    """Normalize solution payloads into a mapping keyed by task id."""
+
+    def _is_sequence(value: object) -> bool:
+        return isinstance(value, ABCSequence) and not isinstance(value, (str, bytes, bytearray))
+
+    solutions: Dict[str, Sequence[List[List[int]]]] = {}
+    if isinstance(raw_solutions, Mapping):
+        for task_id, outputs in raw_solutions.items():
+            if not isinstance(outputs, Iterable):
+                raise TypeError(
+                    f"Solutions for task '{task_id}' in {source} must be iterable, "
+                    f"found {type(outputs).__name__}."
+                )
+            solutions[str(task_id)] = outputs  # type: ignore[assignment]
+        return solutions
+
+    if _is_sequence(raw_solutions):
+        for index, entry in enumerate(raw_solutions):
+            if not isinstance(entry, Mapping):
+                raise TypeError(
+                    f"Entry {index} in {source} solutions must be a mapping, "
+                    f"found {type(entry).__name__}."
+                )
+            task_id = entry.get("task_id") or entry.get("id") or entry.get("name")
+            if not task_id:
+                raise KeyError(
+                    f"Entry {index} in {source} solutions is missing a task identifier."
+                )
+            outputs = (
+                entry.get("outputs")
+                or entry.get("solutions")
+                or entry.get("test_outputs")
+                or entry.get("test")
+                or entry.get("output")
+            )
+            if outputs is None:
+                raise KeyError(
+                    f"Entry {index} in {source} solutions does not contain output data."
+                )
+            if not isinstance(outputs, Iterable):
+                raise TypeError(
+                    f"Solutions for task '{task_id}' in {source} must be iterable, "
+                    f"found {type(outputs).__name__}."
+                )
+            solutions[str(task_id)] = outputs  # type: ignore[assignment]
+        return solutions
+
+    raise TypeError(
+        f"Unsupported container type '{type(raw_solutions).__name__}' for ARC solutions in {source}."
+    )
+
+
 def _load_challenge_solution_tasks(
     challenge_path: Path,
     solution_path: Optional[Path],
@@ -95,25 +200,20 @@ def _load_challenge_solution_tasks(
 
     with challenge_path.open("r", encoding="utf-8") as fh:
         challenge_payload = json.load(fh)
-    if not isinstance(challenge_payload, Mapping):
-        raise TypeError("Challenge file must contain a mapping from task id to payload.")
+    challenge_tasks = _normalize_task_collection(challenge_payload, source=challenge_path, kind=split)
 
     solutions_data: Optional[Mapping[str, Sequence[List[List[int]]]]] = None
     if solution_path is not None and solution_path.is_file():
         with solution_path.open("r", encoding="utf-8") as fh:
             raw_solutions = json.load(fh)
-        if not isinstance(raw_solutions, Mapping):
-            raise TypeError("Solution file must contain a mapping from task id to outputs.")
-        solutions_data = raw_solutions  # type: ignore[assignment]
+        solutions_data = _normalize_solution_collection(raw_solutions, source=solution_path)
     elif split != "test":
         raise FileNotFoundError(
             f"Expected solutions for split '{split}' at '{solution_path}'."
         )
 
     tasks: Dict[str, ARCTask] = {}
-    for task_id, payload in challenge_payload.items():
-        if not isinstance(payload, Mapping):
-            raise TypeError(f"Task '{task_id}' payload must be a mapping.")
+    for task_id, payload in challenge_tasks.items():
         payload_dict: Dict[str, Any] = dict(payload)
         challenge_test = payload_dict.get("test", [])
         if not isinstance(challenge_test, list):
