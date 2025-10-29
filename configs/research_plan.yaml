@@ -16,11 +16,9 @@ stages:
           - --config
           - configs/data_prep.yaml
       - name: run_data_tests
-        kind: command
-        command:
-          - {python}
-          - -m
-          - pytest
+        kind: module
+        module: pytest
+        args:
           - tests/test_data_pipeline.py
       - name: log_data_preparation
         kind: log
@@ -30,17 +28,12 @@ stages:
     description: "実験前に基本的なテストとLintを実行します。"
     tasks:
       - name: run_full_pytest
-        kind: command
-        command:
-          - {python}
-          - -m
-          - pytest
+        kind: module
+        module: pytest
       - name: run_ruff
-        kind: command
-        command:
-          - {python}
-          - -m
-          - ruff
+        kind: module
+        module: ruff
+        args:
           - check
           - src
           - tests

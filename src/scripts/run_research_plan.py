@@ -61,7 +61,28 @@ class PlanTask:
                 raise TypeError(f"Task '{name}' command must not be a string.")
             if not isinstance(raw_command, Iterable):
                 raise TypeError(f"Task '{name}' command must be a sequence of strings.")
-            command_list = [str(item) for item in raw_command]  # type: ignore[arg-type]
+            # Normalize YAML item into placeholder or string; handle flow-mapping, flow-set, and stringified forms
+            command_list = []
+            for item in raw_command:  # type: ignore[assignment]
+                # Case 1: mapping like {'python': None} -> "{python}"
+                if isinstance(item, Mapping) and len(item) == 1:
+                    key = next(iter(item.keys()))
+                    command_list.append("{" + str(key) + "}")
+                    continue
+                # Case 2: set-like value like {"python"} -> "{python}"
+                if isinstance(item, (set, frozenset)) and len(item) == 1:
+                    elem = next(iter(item))
+                    command_list.append("{" + str(elem) + "}")
+                    continue
+                # Case 3: stringified variant like "{'python'}" -> "{python}"
+                s = str(item)
+                if s.startswith("{") and s.endswith("}") and len(s) > 2:
+                    inner = s[1:-1].strip()
+                    if ":" not in inner:
+                        if (inner.startswith("'") and inner.endswith("'")) or (inner.startswith('"') and inner.endswith('"')):
+                            command_list.append("{" + inner[1:-1].strip() + "}")
+                            continue
+                command_list.append(s)
 
         args_list: list[str] = []
         if "args" in payload:
@@ -70,7 +91,28 @@ class PlanTask:
                 raise TypeError(f"Task '{name}' args must not be a string.")
             if not isinstance(raw_args, Iterable):
                 raise TypeError(f"Task '{name}' args must be a sequence of strings.")
-            args_list = [str(item) for item in raw_args]  # type: ignore[arg-type]
+            # Same normalization as command: support flow-mapping, flow-set, and stringified placeholders
+            args_list = []
+            for item in raw_args:  # type: ignore[assignment]
+                # mapping like {'var': None}
+                if isinstance(item, Mapping) and len(item) == 1:
+                    key = next(iter(item.keys()))
+                    args_list.append("{" + str(key) + "}")
+                    continue
+                # set-like like {"var"}
+                if isinstance(item, (set, frozenset)) and len(item) == 1:
+                    elem = next(iter(item))
+                    args_list.append("{" + str(elem) + "}")
+                    continue
+                # stringified like "{'var'}"
+                s = str(item)
+                if s.startswith("{") and s.endswith("}") and len(s) > 2:
+                    inner = s[1:-1].strip()
+                    if ":" not in inner:
+                        if (inner.startswith("'") and inner.endswith("'")) or (inner.startswith('"') and inner.endswith('"')):
+                            args_list.append("{" + inner[1:-1].strip() + "}")
+                            continue
+                args_list.append(s)
 
         cwd_path = None
         if "cwd" in payload and payload["cwd"] is not None:
@@ -190,10 +232,41 @@ class PlanRunner:
         if variables:
             defaults.update(variables)
         self.variables = defaults
+        # Add quoted-key synonyms to tolerate YAML flow-set artifacts like {"python"}
+        # which can become "{'python'}" after stringification.
+        # This makes both {python}, {'python'} and {"python"} resolve to the same value.
+        try:
+            synonyms: Dict[str, str] = {}
+            for key, val in list(self.variables.items()):
+                synonyms[f"'{key}'"] = val
+                synonyms[f'"{key}"'] = val
+            self.variables.update(synonyms)
+        except Exception:
+            # Defensive: never break initialization on edge cases
+            pass
 
     def _format(self, value: str) -> str:
-        """Apply template expansion to a single string."""
+        """Apply template expansion to a single string.
 
+        Notes:
+            Some YAML syntaxes like `{python}` may be parsed by PyYAML as a flow-set,
+            which then becomes the Python string "{'python'}" after str() coercion.
+            Normalize such artifacts back to "{python}" before formatting.
+        """
+        # Normalize mapping-like placeholders and quoted placeholders from PyYAML coercion
+        if isinstance(value, str) and value.startswith("{") and value.endswith("}") and len(value) > 2:
+            inner = value[1:-1].strip()
+            # Handle mapping-like placeholders such as "{'python': None}" or "{python: null}"
+            if ":" in inner:
+                left = inner.split(":", 1)[0].strip()
+                if (left.startswith("'") and left.endswith("'")) or (left.startswith('"') and left.endswith('"')):
+                    left = left[1:-1].strip()
+                if left:
+                    value = "{" + left + "}"
+            else:
+                # Handle quoted name like "{'python'}" or "{"python"}"
+                if (inner.startswith("'") and inner.endswith("'")) or (inner.startswith('"') and inner.endswith('"')):
+                    value = "{" + inner[1:-1].strip() + "}"
         return value.format_map(_StrictFormatDict(self.variables))
 
     def _expand_sequence(self, values: Iterable[str]) -> list[str]:
