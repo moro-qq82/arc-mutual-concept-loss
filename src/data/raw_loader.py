@@ -6,7 +6,7 @@ import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
 
 TASK_LOAD_SEED = 20250214
 
@@ -58,6 +58,80 @@ def _task_from_dict(task_id: str, payload: Mapping[str, Any], *, source_path: Op
     metadata.setdefault("num_train_examples", len(train_examples))
     metadata.setdefault("num_test_examples", len(test_examples))
     return ARCTask(task_id=task_id, train=train_examples, test=test_examples, metadata=dict(metadata))
+
+
+def _normalize_test_examples(
+    task_id: str,
+    challenge_examples: Iterable[Mapping[str, Any]],
+    solutions: Optional[Sequence[List[List[int]]]],
+) -> List[Mapping[str, Any]]:
+    """Merge challenge examples with optional solution outputs."""
+
+    normalized: List[Mapping[str, Any]] = []
+    for index, example in enumerate(challenge_examples):
+        if "output" in example and example["output"] is not None:
+            normalized.append(example)
+            continue
+        if solutions is None:
+            raise ValueError(
+                f"Task '{task_id}' is missing test outputs and no solutions were provided."
+            )
+        if index >= len(solutions):
+            raise ValueError(
+                f"Solutions for task '{task_id}' do not cover test example index {index}."
+            )
+        merged = dict(example)
+        merged["output"] = solutions[index]
+        normalized.append(merged)
+    return normalized
+
+
+def _load_challenge_solution_tasks(
+    challenge_path: Path,
+    solution_path: Optional[Path],
+    split: str,
+) -> Dict[str, ARCTask]:
+    """Load ARC tasks stored as challenge/solution JSON files."""
+
+    with challenge_path.open("r", encoding="utf-8") as fh:
+        challenge_payload = json.load(fh)
+    if not isinstance(challenge_payload, Mapping):
+        raise TypeError("Challenge file must contain a mapping from task id to payload.")
+
+    solutions_data: Optional[Mapping[str, Sequence[List[List[int]]]]] = None
+    if solution_path is not None and solution_path.is_file():
+        with solution_path.open("r", encoding="utf-8") as fh:
+            raw_solutions = json.load(fh)
+        if not isinstance(raw_solutions, Mapping):
+            raise TypeError("Solution file must contain a mapping from task id to outputs.")
+        solutions_data = raw_solutions  # type: ignore[assignment]
+    elif split != "test":
+        raise FileNotFoundError(
+            f"Expected solutions for split '{split}' at '{solution_path}'."
+        )
+
+    tasks: Dict[str, ARCTask] = {}
+    for task_id, payload in challenge_payload.items():
+        if not isinstance(payload, Mapping):
+            raise TypeError(f"Task '{task_id}' payload must be a mapping.")
+        payload_dict: Dict[str, Any] = dict(payload)
+        challenge_test = payload_dict.get("test", [])
+        if not isinstance(challenge_test, list):
+            raise TypeError(f"Task '{task_id}' test examples must be provided as a list.")
+        solutions = solutions_data.get(task_id) if solutions_data is not None else None
+        payload_dict["test"] = _normalize_test_examples(task_id, challenge_test, solutions)
+
+        metadata = payload_dict.get("metadata")
+        if isinstance(metadata, Mapping):
+            payload_dict["metadata"] = dict(metadata)
+        else:
+            payload_dict["metadata"] = {}
+        payload_dict["metadata"].setdefault("source_path", str(challenge_path))
+        if solution_path is not None and solution_path.is_file():
+            payload_dict["metadata"].setdefault("solution_source_path", str(solution_path))
+
+        tasks[task_id] = _task_from_dict(task_id, payload_dict)
+    return tasks
 
 
 def _load_directory_tasks(split_dir: Path) -> Dict[str, ARCTask]:
@@ -116,13 +190,18 @@ def load_arc_tasks(raw_data_root: Path | str, split: str, *, seed: int = TASK_LO
         tasks = _load_directory_tasks(split_dir)
     else:
         jsonl_path = root_path / f"{split}.jsonl"
+        challenge_path = root_path / f"arc-agi_{split}_challenges.json"
+        solution_path = root_path / f"arc-agi_{split}_solutions.json"
         if jsonl_path.is_file():
             tasks = _load_jsonl_tasks(jsonl_path, split)
+        elif challenge_path.is_file():
+            tasks = _load_challenge_solution_tasks(challenge_path, solution_path, split)
         elif root_path.is_file() and root_path.suffix == ".jsonl":
             tasks = _load_jsonl_tasks(root_path, split)
         else:
             raise FileNotFoundError(
-                f"Could not find data for split '{split}'. Checked '{split_dir}' and '{jsonl_path}'."
+                "Could not find data for split "
+                f"'{split}'. Checked '{split_dir}', '{jsonl_path}', and '{challenge_path}'."
             )
 
     # Deterministic ordering with optional seeded shuffling for reproducibility.

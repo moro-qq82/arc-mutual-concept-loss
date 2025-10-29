@@ -33,6 +33,33 @@ def sample_dataset(tmp_path: Path) -> Path:
     return data_root
 
 
+@pytest.fixture
+def challenge_solution_dataset(tmp_path: Path) -> Path:
+    data_root = tmp_path / "arc"
+    data_root.mkdir(parents=True)
+
+    challenge_payload = {
+        "task_c": {
+            "train": [
+                {"input": [[0]], "output": [[1]]},
+                {"input": [[1]], "output": [[2]]},
+            ],
+            "test": [
+                {"input": [[2]]},
+                {"input": [[3]]},
+            ],
+        }
+    }
+    solution_payload = {"task_c": [[[3]], [[4]]]}  # type: ignore[list-item]
+
+    with (data_root / "arc-agi_training_challenges.json").open("w", encoding="utf-8") as fh:
+        json.dump(challenge_payload, fh)
+    with (data_root / "arc-agi_training_solutions.json").open("w", encoding="utf-8") as fh:
+        json.dump(solution_payload, fh)
+
+    return data_root
+
+
 def test_load_arc_tasks_from_directory(sample_dataset: Path) -> None:
     tasks = load_arc_tasks(sample_dataset, "training")
     assert "task_a" in tasks
@@ -40,6 +67,15 @@ def test_load_arc_tasks_from_directory(sample_dataset: Path) -> None:
     assert task.metadata["num_train_examples"] == 3
     assert task.metadata["num_test_examples"] == 1
     assert task.train[0].input == [[1, 2], [3, 4]]
+
+
+def test_load_arc_tasks_from_challenge_solution(challenge_solution_dataset: Path) -> None:
+    tasks = load_arc_tasks(challenge_solution_dataset, "training")
+    assert "task_c" in tasks
+    task = tasks["task_c"]
+    assert len(task.test) == 2
+    assert task.test[0].output == [[3]]
+    assert task.test[1].output == [[4]]
 
 
 def test_prepare_data_pipeline_outputs(tmp_path: Path, sample_dataset: Path) -> None:
