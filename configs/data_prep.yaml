@@ -1,4 +1,4 @@
-raw_data_dir: ARC-AGI-2-main/data
+raw_data_dir: data/raw
 processed_dir: data/processed
 splits_dir: data/splits
 kshot_indices_dir: data/splits/kshot_indices
