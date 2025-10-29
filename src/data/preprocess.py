@@ -64,8 +64,10 @@ class DataPrepConfig:
 def _select_k_indices(num_examples: int, k: int, seed: int) -> List[int]:
     """Select ``k`` indices deterministically using the provided seed."""
 
-    if num_examples < k:
-        raise ValueError(f"Cannot select {k} examples from only {num_examples} candidates.")
+    if num_examples <= 0:
+        raise ValueError("Tasks must contain at least one training example.")
+    if num_examples <= k:
+        return list(range(num_examples))
     indices = list(range(num_examples))
     rng = random.Random(seed)
     rng.shuffle(indices)
