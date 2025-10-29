@@ -100,9 +100,7 @@ class ShareSubspaceRegularizer(nn.Module):
             zero = activations.new_tensor(0.0)
             metrics = {
                 "share_loss": zero,
-                "share_groups": torch.tensor(
-                    float(len(valid_projectors)), device=activations.device, dtype=activations.dtype
-                ),
+                "share_groups": activations.new_tensor(0.0),
             }
             return ShareRegularizerOutput(loss=zero, metrics=metrics)
 
