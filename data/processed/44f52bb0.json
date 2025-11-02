@@ -1,0 +1,133 @@
+{
+  "task_id": "44f52bb0",
+  "k_shot_examples": [
+    {
+      "input": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "output": [
+        [
+          1
+        ]
+      ]
+    },
+    {
+      "input": [
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0
+        ]
+      ],
+      "output": [
+        [
+          7
+        ]
+      ]
+    },
+    {
+      "input": [
+        [
+          2,
+          0,
+          2
+        ],
+        [
+          2,
+          0,
+          2
+        ],
+        [
+          2,
+          0,
+          2
+        ]
+      ],
+      "output": [
+        [
+          1
+        ]
+      ]
+    }
+  ],
+  "test_examples": [
+    {
+      "input": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ]
+      ],
+      "output": [
+        [
+          7
+        ]
+      ]
+    },
+    {
+      "input": [
+        [
+          2,
+          0,
+          2
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          2,
+          0,
+          2
+        ]
+      ],
+      "output": [
+        [
+          1
+        ]
+      ]
+    }
+  ],
+  "metadata": {
+    "source_path": "data/raw/arc-agi_training_challenges.json",
+    "solution_source_path": "data/raw/arc-agi_training_solutions.json",
+    "num_train_examples": 6,
+    "num_test_examples": 2
+  }
+}
