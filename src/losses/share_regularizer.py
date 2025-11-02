@@ -68,9 +68,24 @@ class ShareSubspaceRegularizer(nn.Module):
                 (centered.shape[1], centered.shape[1]), device=centered.device, dtype=centered.dtype
             )
             return zero, 0
-        _, _, v = torch.pca_lowrank(centered, q=rank)
+
+        # Some CUDA linear-algebra kernels (QR/SVD) are not implemented for bfloat16.
+        # To avoid NotImplementedError on e.g. geqrf_cuda for BFloat16, perform the
+        # low-rank decomposition in float32 and then cast the resulting projector
+        # back to the original dtype. This keeps the rest of the pipeline in the
+        # model's dtype while ensuring decomposition succeeds.
+        orig_dtype = centered.dtype
+        need_cast = centered.is_cuda and orig_dtype == torch.bfloat16
+        centered_for_svd = centered.to(torch.float32) if need_cast else centered
+
+        _, _, v = torch.pca_lowrank(centered_for_svd, q=rank)
         components = v[:, :rank]
         projector = components @ components.transpose(0, 1)
+
+        if need_cast:
+            # cast projector back to the original dtype (e.g. bfloat16)
+            projector = projector.to(orig_dtype)
+
         return projector, components.shape[1]
 
     def forward(
