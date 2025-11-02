@@ -5,4 +5,5 @@ personal_note.md
 data/processed/
 data/splits/
 logs/
+checkpoints/
 

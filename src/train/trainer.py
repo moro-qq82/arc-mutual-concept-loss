@@ -11,7 +11,7 @@ from typing import Dict, Iterable, Mapping, Optional
 
 import torch
 from torch import Tensor, nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
@@ -181,7 +181,7 @@ class ARCTrainer:
 
         use_amp = self.config.use_amp and self.device.type == "cuda"
         amp_dtype = _amp_dtype(self.config.amp_dtype)
-        scaler = GradScaler(enabled=use_amp)
+        scaler = GradScaler(self.device.type, enabled=use_amp)
 
         self.config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         writer = SummaryWriter(log_dir=str(self.config.tensorboard_dir))
@@ -198,7 +198,7 @@ class ARCTrainer:
 
             for batch_index, batch in enumerate(train_loader, start=1):
                 batch_moved = self._move_to_device(batch)
-                with autocast(device_type=self.device.type, dtype=amp_dtype, enabled=use_amp):
+                with autocast(self.device.type, dtype=amp_dtype, enabled=use_amp):
                     losses = self._forward_step(batch_moved)
                     loss = losses["total_loss"] / accumulation
                 scaler.scale(loss).backward()

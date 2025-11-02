@@ -144,11 +144,20 @@ def _build_dataclass(cls: Any, mapping: Optional[Mapping[str, Any]]) -> Any:
     instance = cls()
     if not mapping:
         return instance
+
+    # Resolve type hints to concrete types (handles postponed annotations via __future__)
+    try:
+        from typing import get_type_hints  # Local import to avoid global dependency.
+        type_hints = get_type_hints(cls)
+    except Exception:
+        type_hints = {}
+
     for field in fields(instance):
         if field.name not in mapping:
             continue
         value = mapping[field.name]
-        setattr(instance, field.name, _convert_value(field.type, value))
+        target_type = type_hints.get(field.name, field.type)
+        setattr(instance, field.name, _convert_value(target_type, value))
     return instance
 
 
