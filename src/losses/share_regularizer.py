@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Tuple
 import torch
 from torch import Tensor, nn
 
+from ..utils import promote_precision, restore_precision
+
 
 @dataclass
 class ShareRegularizerOutput:
@@ -68,7 +70,9 @@ class ShareSubspaceRegularizer(nn.Module):
                 (centered.shape[1], centered.shape[1]), device=centered.device, dtype=centered.dtype
             )
             return zero, 0
-        _, _, v = torch.pca_lowrank(centered, q=rank)
+        promoted = promote_precision(centered)
+        _, _, v = torch.pca_lowrank(promoted, q=rank)
+        v = restore_precision(centered, v)
         components = v[:, :rank]
         projector = components @ components.transpose(0, 1)
         return projector, components.shape[1]
