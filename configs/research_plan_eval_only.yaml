@@ -1,0 +1,20 @@
+default_cwd: ..
+stages:
+  training_and_evaluation:
+    description: "学習・評価ジョブ（評価のみ）"
+    tasks:
+      - name: ensure_checkpoint_directory
+        kind: mkdir
+        directory: ../reports/checkpoints
+      - name: run_eval
+        kind: module
+        module: src.scripts.run_eval
+        args:
+          - --config
+          - configs/eval.yaml
+      - name: run_meta_adaptation
+        kind: module
+        module: src.scripts.run_meta_adaptation
+        args:
+          - --config
+          - configs/meta_adaptation.yaml
