@@ -1,0 +1,73 @@
+{
+  "ablation": "B2",
+  "variant": "B2",
+  "description": "疎オートエンコーダの損失を無効化し、共有サブスペース正則化のみを残した設定。",
+  "stage": "train",
+  "base_config": "configs/train.yaml",
+  "seed": 20250214,
+  "data": {
+    "processed_dir": "data/processed",
+    "splits_dir": "data/splits",
+    "batch_size": 4
+  },
+  "model_kwargs": {},
+  "loss": {
+    "task_loss_type": "cross_entropy",
+    "task_ignore_index": -100,
+    "task_label_smoothing": 0.0,
+    "task_exact_match_weight": 0.1,
+    "sae_recon_weight": 1.0,
+    "sae_l1_weight": 0.001,
+    "sae_target_sparsity": 0.05,
+    "sae_adaptation_rate": 5.0,
+    "sae_activation_threshold": 0.001,
+    "share_rank": 8,
+    "share_activation_threshold": 0.0005,
+    "share_min_group_size": 3,
+    "alpha": 0.1,
+    "beta": 0.0
+  },
+  "optimizer": {
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "betas": [
+      0.9,
+      0.95
+    ]
+  },
+  "scheduler": {
+    "warmup_steps": 0,
+    "warmup_ratio": 0.1,
+    "min_lr_ratio": 0.1
+  },
+  "trainer": {
+    "epochs": 50,
+    "gradient_accumulation_steps": 1,
+    "max_grad_norm": 1.0,
+    "use_amp": true,
+    "amp_dtype": "bf16",
+    "log_interval": 25,
+    "eval_interval": 1,
+    "checkpoint_dir": "checkpoints/ablations/B2",
+    "tensorboard_dir": "logs/train/ablations/B2/tensorboard",
+    "history_path": "logs/train/ablations/B2/history.jsonl",
+    "device": null
+  },
+  "metrics": {
+    "validation": {
+      "total_loss": 1.3126648461818695,
+      "task_loss": 1.3126648461818695,
+      "sae_loss": 0.982502646446228,
+      "share_loss": 0.0,
+      "pixel_accuracy": 0.7338269364833832,
+      "exact_match_rate": 0.02,
+      "exact_match_loss": 0.98,
+      "sae_reconstruction_loss": 0.982502646446228,
+      "sae_l1_loss": 0.0,
+      "sae_l1_weight": 0.000750000006519258,
+      "sae_sparsity": 0.0,
+      "share_share_loss": 0.0,
+      "share_share_groups": 0.0
+    }
+  }
+}

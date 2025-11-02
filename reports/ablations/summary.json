@@ -1,0 +1,190 @@
+{
+  "results": [
+    {
+      "ablation": "B5",
+      "variant": "transformer",
+      "label": "コンテキストエンコーダ比較",
+      "description": "既定のTransformer構成をそのまま用いた比較用リファレンス。",
+      "config_path": "configs/ablations/B5.yaml",
+      "stages": {
+        "train": {
+          "report_path": "reports/ablations/B5_transformer.json",
+          "metrics": {
+            "validation": {
+              "total_loss": 1.3074888241291047,
+              "task_loss": 1.3074695110321044,
+              "sae_loss": 1.932536324602552e-05,
+              "share_loss": 0.0,
+              "pixel_accuracy": 0.7498738861083984,
+              "exact_match_rate": 0.02,
+              "exact_match_loss": 0.98,
+              "sae_reconstruction_loss": 1.0270369011777801e-06,
+              "sae_l1_loss": 0.01259239625185728,
+              "sae_l1_weight": 0.0014531250344589353,
+              "sae_sparsity": 0.140625,
+              "share_share_loss": 0.0,
+              "share_share_groups": 0.0
+            }
+          },
+          "checkpoint_dir": "checkpoints/ablations/B5_transformer",
+          "history_path": "logs/train/ablations/B5_transformer/history.jsonl"
+        }
+      }
+    },
+    {
+      "ablation": "B5",
+      "variant": "lightweight",
+      "label": "コンテキストエンコーダ比較",
+      "description": "コンテキストエンコーダの層数とヘッド数を削減した軽量Transformerの挙動を確認する。",
+      "config_path": "configs/ablations/B5.yaml",
+      "stages": {
+        "train": {
+          "report_path": "reports/ablations/B5_lightweight.json",
+          "metrics": {
+            "validation": {
+              "total_loss": 1.2579772090911865,
+              "task_loss": 1.257963171005249,
+              "sae_loss": 1.4042800758033991e-05,
+              "share_loss": 0.0,
+              "pixel_accuracy": 0.7360191416740417,
+              "exact_match_rate": 0.02,
+              "exact_match_loss": 0.98,
+              "sae_reconstruction_loss": 1.4136885783955222e-06,
+              "sae_l1_loss": 0.01245877604931593,
+              "sae_l1_weight": 0.0010136719793081284,
+              "sae_sparsity": 0.052734375,
+              "share_share_loss": 0.0,
+              "share_share_groups": 0.0
+            }
+          },
+          "checkpoint_dir": "checkpoints/ablations/B5_lightweight",
+          "history_path": "logs/train/ablations/B5_lightweight/history.jsonl"
+        }
+      }
+    },
+    {
+      "ablation": "B5",
+      "variant": "single_head",
+      "label": "コンテキストエンコーダ比較",
+      "description": "単一ヘッドかつ中間次元を縮小した疑似GRUスタイル表現の効果を調べる。",
+      "config_path": "configs/ablations/B5.yaml",
+      "stages": {
+        "train": {
+          "report_path": "reports/ablations/B5_single_head.json",
+          "metrics": {
+            "validation": {
+              "total_loss": 1.2380158376693726,
+              "task_loss": 1.2378335571289063,
+              "sae_loss": 0.000182279699947685,
+              "share_loss": 0.0,
+              "pixel_accuracy": 0.7389716386795044,
+              "exact_match_rate": 0.02,
+              "exact_match_loss": 0.98,
+              "sae_reconstruction_loss": 1.8925539989140817e-05,
+              "sae_l1_loss": 0.06438593447208404,
+              "sae_l1_weight": 0.002537109423428774,
+              "sae_sparsity": 0.357421875,
+              "share_share_loss": 0.0,
+              "share_share_groups": 0.0
+            }
+          },
+          "checkpoint_dir": "checkpoints/ablations/B5_single_head",
+          "history_path": "logs/train/ablations/B5_single_head/history.jsonl"
+        }
+      }
+    },
+    {
+      "ablation": "B6",
+      "variant": "k8_alpha005",
+      "label": "共有サブスペース次元スイープ",
+      "description": "ランク8かつα=0.05の組み合わせ。軽めの共有制約を基準とする。",
+      "config_path": "configs/ablations/B6.yaml",
+      "stages": {
+        "train": {
+          "report_path": "reports/ablations/B6_k8_a005.json",
+          "metrics": {
+            "validation": {
+              "total_loss": 1.260045646429062,
+              "task_loss": 1.2600257062911988,
+              "sae_loss": 1.9942315993830562e-05,
+              "share_loss": 0.0,
+              "pixel_accuracy": 0.7539657807350159,
+              "exact_match_rate": 0.02,
+              "exact_match_loss": 0.98,
+              "sae_reconstruction_loss": 1.4577624324374484e-06,
+              "sae_l1_loss": 0.012551845200359821,
+              "sae_l1_weight": 0.0014726562658324838,
+              "sae_sparsity": 0.14453125,
+              "share_share_loss": 0.0,
+              "share_share_groups": 0.0
+            }
+          },
+          "checkpoint_dir": "checkpoints/ablations/B6_k8_a005",
+          "history_path": "logs/train/ablations/B6_k8_a005/history.jsonl"
+        }
+      }
+    },
+    {
+      "ablation": "B6",
+      "variant": "k16_alpha01",
+      "label": "共有サブスペース次元スイープ",
+      "description": "ランク16かつα=0.1。共有サブスペース次元を倍にした場合の影響を確認する。",
+      "config_path": "configs/ablations/B6.yaml",
+      "stages": {
+        "train": {
+          "report_path": "reports/ablations/B6_k16_a01.json",
+          "metrics": {
+            "validation": {
+              "total_loss": 1.3424984085559846,
+              "task_loss": 1.3424802899360657,
+              "sae_loss": 1.8110595774487593e-05,
+              "share_loss": 0.0,
+              "pixel_accuracy": 0.7349521791934968,
+              "exact_match_rate": 0.02,
+              "exact_match_loss": 0.98,
+              "sae_reconstruction_loss": 1.276033653994091e-06,
+              "sae_l1_loss": 0.011823450587689877,
+              "sae_l1_weight": 0.0014238281873986125,
+              "sae_sparsity": 0.134765625,
+              "share_share_loss": 0.0,
+              "share_share_groups": 0.0
+            }
+          },
+          "checkpoint_dir": "checkpoints/ablations/B6_k16_a01",
+          "history_path": "logs/train/ablations/B6_k16_a01/history.jsonl"
+        }
+      }
+    },
+    {
+      "ablation": "B6",
+      "variant": "k32_alpha02",
+      "label": "共有サブスペース次元スイープ",
+      "description": "ランク32かつα=0.2。最も強い共有制約の挙動を観察する。",
+      "config_path": "configs/ablations/B6.yaml",
+      "stages": {
+        "train": {
+          "report_path": "reports/ablations/B6_k32_a02.json",
+          "metrics": {
+            "validation": {
+              "total_loss": 1.300001380443573,
+              "task_loss": 1.2999834680557252,
+              "sae_loss": 1.793444840586744e-05,
+              "share_loss": 0.0,
+              "pixel_accuracy": 0.7392270767688751,
+              "exact_match_rate": 0.02,
+              "exact_match_loss": 0.98,
+              "sae_reconstruction_loss": 8.201840273613925e-07,
+              "sae_l1_loss": 0.011698936149477958,
+              "sae_l1_weight": 0.0014628906501457095,
+              "sae_sparsity": 0.142578125,
+              "share_share_loss": 0.0,
+              "share_share_groups": 0.0
+            }
+          },
+          "checkpoint_dir": "checkpoints/ablations/B6_k32_a02",
+          "history_path": "logs/train/ablations/B6_k32_a02/history.jsonl"
+        }
+      }
+    }
+  ]
+}

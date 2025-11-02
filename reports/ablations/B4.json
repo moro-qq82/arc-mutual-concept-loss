@@ -1,0 +1,73 @@
+{
+  "ablation": "B4",
+  "variant": "B4",
+  "description": "few-shotメタ適応においてLoRA/Adapterへ依存せずほぼ全層を更新するケースを近似的に評価する設定。",
+  "stage": "train",
+  "base_config": "configs/train.yaml",
+  "seed": 20250214,
+  "data": {
+    "processed_dir": "data/processed",
+    "splits_dir": "data/splits",
+    "batch_size": 3
+  },
+  "model_kwargs": {},
+  "loss": {
+    "task_loss_type": "cross_entropy",
+    "task_ignore_index": -100,
+    "task_label_smoothing": 0.0,
+    "task_exact_match_weight": 0.1,
+    "sae_recon_weight": 1.0,
+    "sae_l1_weight": 0.001,
+    "sae_target_sparsity": 0.05,
+    "sae_adaptation_rate": 5.0,
+    "sae_activation_threshold": 0.001,
+    "share_rank": 8,
+    "share_activation_threshold": 0.001,
+    "share_min_group_size": 4,
+    "alpha": 1.0,
+    "beta": 1.0
+  },
+  "optimizer": {
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "betas": [
+      0.9,
+      0.95
+    ]
+  },
+  "scheduler": {
+    "warmup_steps": 0,
+    "warmup_ratio": 0.1,
+    "min_lr_ratio": 0.1
+  },
+  "trainer": {
+    "epochs": 50,
+    "gradient_accumulation_steps": 1,
+    "max_grad_norm": 1.0,
+    "use_amp": true,
+    "amp_dtype": "bf16",
+    "log_interval": 25,
+    "eval_interval": 1,
+    "checkpoint_dir": "checkpoints/ablations/B4",
+    "tensorboard_dir": "logs/train/ablations/B4/tensorboard",
+    "history_path": "logs/train/ablations/B4/history.jsonl",
+    "device": null
+  },
+  "metrics": {
+    "validation": {
+      "total_loss": 1.352839198182611,
+      "task_loss": 1.3528316459235024,
+      "sae_loss": 7.546786264356342e-06,
+      "share_loss": 0.0,
+      "pixel_accuracy": 0.7334936979938956,
+      "exact_match_rate": 0.019607843721614164,
+      "exact_match_loss": 0.980392154525308,
+      "sae_reconstruction_loss": 6.65637757305483e-07,
+      "sae_l1_loss": 0.005370170494322391,
+      "sae_l1_weight": 0.001281364995520562,
+      "sae_sparsity": 0.10627298078992788,
+      "share_share_loss": 0.0,
+      "share_share_groups": 0.0
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "ablation": "B6",
+  "variant": "k16_alpha01",
+  "description": "ランク16かつα=0.1。共有サブスペース次元を倍にした場合の影響を確認する。",
+  "stage": "train",
+  "base_config": "configs/train.yaml",
+  "seed": 20250214,
+  "data": {
+    "processed_dir": "data/processed",
+    "splits_dir": "data/splits",
+    "batch_size": 4
+  },
+  "model_kwargs": {},
+  "loss": {
+    "task_loss_type": "cross_entropy",
+    "task_ignore_index": -100,
+    "task_label_smoothing": 0.0,
+    "task_exact_match_weight": 0.1,
+    "sae_recon_weight": 1.0,
+    "sae_l1_weight": 0.001,
+    "sae_target_sparsity": 0.05,
+    "sae_adaptation_rate": 5.0,
+    "sae_activation_threshold": 0.001,
+    "share_rank": 16,
+    "share_activation_threshold": 0.001,
+    "share_min_group_size": 4,
+    "alpha": 0.1,
+    "beta": 1.0
+  },
+  "optimizer": {
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "betas": [
+      0.9,
+      0.95
+    ]
+  },
+  "scheduler": {
+    "warmup_steps": 0,
+    "warmup_ratio": 0.1,
+    "min_lr_ratio": 0.1
+  },
+  "trainer": {
+    "epochs": 50,
+    "gradient_accumulation_steps": 1,
+    "max_grad_norm": 1.0,
+    "use_amp": true,
+    "amp_dtype": "bf16",
+    "log_interval": 25,
+    "eval_interval": 1,
+    "checkpoint_dir": "checkpoints/ablations/B6_k16_a01",
+    "tensorboard_dir": "logs/train/ablations/B6_k16_a01/tensorboard",
+    "history_path": "logs/train/ablations/B6_k16_a01/history.jsonl",
+    "device": null
+  },
+  "metrics": {
+    "validation": {
+      "total_loss": 1.3424984085559846,
+      "task_loss": 1.3424802899360657,
+      "sae_loss": 1.8110595774487593e-05,
+      "share_loss": 0.0,
+      "pixel_accuracy": 0.7349521791934968,
+      "exact_match_rate": 0.02,
+      "exact_match_loss": 0.98,
+      "sae_reconstruction_loss": 1.276033653994091e-06,
+      "sae_l1_loss": 0.011823450587689877,
+      "sae_l1_weight": 0.0014238281873986125,
+      "sae_sparsity": 0.134765625,
+      "share_share_loss": 0.0,
+      "share_share_groups": 0.0
+    }
+  }
+}
