@@ -8,6 +8,8 @@ from typing import Dict, Iterable, List, Mapping
 
 import torch
 
+from src.utils import promote_precision, restore_precision
+
 
 def derive_subspace_basis(
     features: torch.Tensor,
@@ -19,7 +21,9 @@ def derive_subspace_basis(
     matrix = features
     if center:
         matrix = features - features.mean(dim=0, keepdim=True)
-    u, _, _ = torch.linalg.svd(matrix, full_matrices=False)
+    promoted = promote_precision(matrix)
+    u, _, _ = torch.linalg.svd(promoted, full_matrices=False)
+    u = restore_precision(matrix, u)
     if rank > u.shape[1]:
         raise ValueError("`rank` must be smaller than the feature dimension.")
     return u[:, :rank]
@@ -29,8 +33,12 @@ def compute_principal_angles(basis_a: torch.Tensor, basis_b: torch.Tensor) -> to
     """Compute principal angles between two subspaces given orthonormal bases."""
     if basis_a.shape[0] != basis_b.shape[0]:
         raise ValueError("Bases must share the same ambient dimension.")
-    q_a = torch.linalg.qr(basis_a).Q
-    q_b = torch.linalg.qr(basis_b).Q
+    promoted_a = promote_precision(basis_a)
+    promoted_b = promote_precision(basis_b)
+    q_a = torch.linalg.qr(promoted_a).Q
+    q_b = torch.linalg.qr(promoted_b).Q
+    q_a = restore_precision(basis_a, q_a)
+    q_b = restore_precision(basis_b, q_b)
     m = q_a.T @ q_b
     singular_values = torch.linalg.svdvals(m)
     singular_values = torch.clamp(singular_values, 0.0, 1.0)
