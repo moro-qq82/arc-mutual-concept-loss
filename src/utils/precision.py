@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import torch
+from contextlib import contextmanager
+from typing import Iterator
 
 
 def promote_precision(tensor: torch.Tensor) -> torch.Tensor:
@@ -17,3 +19,13 @@ def restore_precision(reference: torch.Tensor, value: torch.Tensor) -> torch.Ten
     if reference.dtype != value.dtype:
         return value.to(reference.dtype)
     return value
+
+
+@contextmanager
+def autocast_disabled(device_type: str) -> Iterator[None]:
+    """Temporarily disable autocast for the provided device type."""
+    if device_type in {"cuda", "cpu"}:
+        with torch.autocast(device_type, enabled=False):
+            yield
+    else:
+        yield
