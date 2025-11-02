@@ -72,6 +72,19 @@ python -m src.scripts.run_eval --config configs/eval.yaml
 ```
 - 指定した分割 (デフォルトでは検証またはメタ評価) に対する正解率などの指標を標準出力と `reports/eval/` 以下の JSON に保存します。
 
+### テストチャレンジへの推論と提出ファイル生成
+ARC-AGI テストチャレンジ (`data/raw/arc-agi_test_challenges.json`) を入力に、提出用の `submission.json` を作成する場合は次のスクリプトを利用します。
+```bash
+python -m src.scripts.generate_submission \
+    --checkpoint checkpoints/latest.pt \
+    --config configs/eval.yaml \
+    --challenge-path data/raw/arc-agi_test_challenges.json \
+    --output submission.json
+```
+- `--config` にはモデル構成 (主に `evaluation.model` セクション) が記載された YAML を指定します。追加のモデルハイパーパラメータを JSON 文字列で渡したい場合は `--model-kwargs` を利用できます。
+- 推論は 1 タスクずつ順に実行され、各テスト例に対して `attempt_1` と `attempt_2` の 2 つの出力グリッドが生成されます (後者は学習例の出力サイズを参考にした推測です)。
+- 出力先ディレクトリが存在しない場合は自動的に作成されます。
+
 ### Few-Shot メタ適応
 LoRA/Adapter を用いたメタ適応を評価する場合:
 ```bash
