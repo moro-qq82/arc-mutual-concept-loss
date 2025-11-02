@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 from torch import Tensor, nn
 
-from ..utils import promote_precision, restore_precision
+from ..utils import autocast_disabled, promote_precision, restore_precision
 
 
 @dataclass
@@ -71,7 +71,11 @@ class ShareSubspaceRegularizer(nn.Module):
             )
             return zero, 0
         promoted = promote_precision(centered)
-        _, _, v = torch.pca_lowrank(promoted, q=rank)
+        working = promoted
+        if working.dtype in {torch.float16, torch.bfloat16}:
+            working = working.to(torch.float32)
+        with autocast_disabled(working.device.type):
+            _, _, v = torch.pca_lowrank(working, q=rank)
         v = restore_precision(centered, v)
         components = v[:, :rank]
         projector = components @ components.transpose(0, 1)
