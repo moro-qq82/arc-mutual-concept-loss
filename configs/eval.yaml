@@ -12,7 +12,7 @@ data:
   ignore_index: -100
 
 evaluation:
-  checkpoint_path: checkpoints/latest.pt
+  checkpoint_path: checkpoints/ablations/B6_k8_a005/best.pt
   output_path: reports/ic_eval/latest.json
   split: test
   device: null

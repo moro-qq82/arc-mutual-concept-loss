@@ -94,7 +94,11 @@ def _pad_grid(
     if not grid:
         return tensor
     original = torch.tensor(grid, dtype=torch.long)
-    tensor[: original.shape[0], : original.shape[1]] = original
+    # コピーするサイズは小さい方を使用
+    copy_height = min(original.shape[0], height)
+    copy_width = min(original.shape[1], width)
+    # 安全にコピー
+    tensor[:copy_height, :copy_width] = original[:copy_height, :copy_width]
     return tensor
 
 

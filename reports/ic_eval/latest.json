@@ -1,0 +1,20 @@
+{
+  "config": {
+    "checkpoint_path": "checkpoints/ablations/B6_k8_a005/best.pt",
+    "split": "test",
+    "device": "auto",
+    "max_batches": null,
+    "model_kwargs": {},
+    "data": {
+      "processed_dir": "data/processed",
+      "splits_dir": "data/splits"
+    }
+  },
+  "metrics": {
+    "task_top1": 0.006505576208178439,
+    "task_top3": 0.29182156133828996,
+    "exact_match_rate": 0.006505576208178439,
+    "pixel_accuracy": 0.7737748589039963,
+    "mean_iou": 0.53851441762832
+  }
+}

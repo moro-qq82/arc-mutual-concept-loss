@@ -4,4 +4,4 @@ personal_note.md
 .vscode/
 logs/
 checkpoints/
-
+!checkpoints/best.pt
