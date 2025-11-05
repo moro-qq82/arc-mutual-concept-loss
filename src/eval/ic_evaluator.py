@@ -109,6 +109,7 @@ class InContextEvaluator:
 
         predictions = logits.argmax(dim=2).cpu()
         targets = batch["query_outputs"].cpu()
+        query_inputs = batch["query_inputs"].cpu()
         mask = batch.get("query_mask")
         mask_cpu = mask.cpu() if isinstance(mask, Tensor) else None
         records: List[Mapping[str, object]] = []
@@ -134,12 +135,15 @@ class InContextEvaluator:
                     width = int(valid_cols.sum().item())
                     prediction_grid = prediction[:height, :width].tolist()
                     target_grid = target[:height, :width].tolist()
+                    input_grid = query_inputs[task_index, query_index, :height, :width].tolist()
                 else:
                     prediction_grid = prediction.tolist()
                     target_grid = target.tolist()
+                    input_grid = query_inputs[task_index, query_index].tolist()
                 query_records.append(
                     {
                         "query_index": query_index,
+                        "input": input_grid,
                         "prediction": prediction_grid,
                         "target": target_grid,
                     }
