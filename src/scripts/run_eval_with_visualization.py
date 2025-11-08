@@ -105,10 +105,33 @@ def _sanitize_grid(grid: Sequence[Sequence[int]]) -> np.ndarray:
     return array
 
 
-def _render_triplet(
+def _load_support_examples(processed_dir: Path, task_id: str) -> list[Mapping[str, Any]]:
+    """Load support examples for ``task_id`` from the processed dataset."""
+
+    task_path = processed_dir / f"{task_id}.json"
+    if not task_path.is_file():
+        return []
+    with task_path.open("r", encoding="utf-8") as fh:
+        payload = json.load(fh)
+    examples = payload.get("k_shot_examples")
+    if not isinstance(examples, Sequence):
+        return []
+    support_examples: list[Mapping[str, Any]] = []
+    for example in examples:
+        if not isinstance(example, Mapping):
+            continue
+        input_grid = example.get("input")
+        output_grid = example.get("output")
+        if isinstance(input_grid, Sequence) and isinstance(output_grid, Sequence):
+            support_examples.append({"input": input_grid, "output": output_grid})
+    return support_examples
+
+
+def _render_task_summary(
     input_grid: Sequence[Sequence[int]],
     prediction: Sequence[Sequence[int]],
     target: Sequence[Sequence[int]],
+    support_examples: Sequence[Mapping[str, Sequence[Sequence[int]]]],
     *,
     title: str,
     cmap: colors.ListedColormap,
@@ -129,11 +152,37 @@ def _render_triplet(
     accuracy = float((~mismatch).sum() / mismatch.size)
     is_perfect = bool(np.array_equal(pred_arr, target_arr))
 
-    fig, axes = plt.subplots(1, 3, figsize=(9, 3), constrained_layout=True)
+    support_to_show = list(support_examples[:2])
+    total_rows = len(support_to_show) + 1
+    fig = plt.figure(figsize=(9, 3 * total_rows), constrained_layout=True)
+    grid_spec = fig.add_gridspec(total_rows, 3)
+
+    for row_index, example in enumerate(support_to_show):
+        support_input = _sanitize_grid(example.get("input", []))
+        support_output = _sanitize_grid(example.get("output", []))
+
+        input_ax = fig.add_subplot(grid_spec[row_index, 0])
+        input_ax.imshow(support_input, cmap=cmap, norm=norm, interpolation="nearest")
+        input_ax.set_title(f"Support {row_index + 1} Input")
+        input_ax.axis("off")
+
+        output_ax = fig.add_subplot(grid_spec[row_index, 1])
+        output_ax.imshow(support_output, cmap=cmap, norm=norm, interpolation="nearest")
+        output_ax.set_title(f"Support {row_index + 1} Output")
+        output_ax.axis("off")
+
+        placeholder_ax = fig.add_subplot(grid_spec[row_index, 2])
+        placeholder_ax.axis("off")
+
+    query_row = len(support_to_show)
+    query_axes = [
+        fig.add_subplot(grid_spec[query_row, col_index])
+        for col_index in range(3)
+    ]
     panels = [
-        (axes[0], input_arr, "Query Input"),
-        (axes[1], pred_arr, "Model Prediction"),
-        (axes[2], target_arr, "Ground Truth"),
+        (query_axes[0], input_arr, "Query Input"),
+        (query_axes[1], pred_arr, "Model Prediction"),
+        (query_axes[2], target_arr, "Ground Truth"),
     ]
     for ax, grid_arr, subtitle in panels:
         ax.imshow(grid_arr, cmap=cmap, norm=norm, interpolation="nearest")
@@ -141,7 +190,12 @@ def _render_triplet(
         ax.axis("off")
 
     if mismatch.any():
-        axes[1].imshow(np.ma.masked_where(~mismatch, mismatch), cmap="Reds", alpha=0.35, interpolation="nearest")
+        query_axes[1].imshow(
+            np.ma.masked_where(~mismatch, mismatch),
+            cmap="Reds",
+            alpha=0.35,
+            interpolation="nearest",
+        )
 
     fig.suptitle(f"{title}\nMatch: {'✔' if is_perfect else '✘'}  Accuracy: {accuracy * 100:.1f}%")
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,6 +207,7 @@ def _visualize_predictions(
     predictions: Iterable[Mapping[str, Any]],
     *,
     figures_dir: Path,
+    processed_dir: Path,
     max_tasks: int | None,
     max_queries: int | None,
     dpi: int,
@@ -161,6 +216,7 @@ def _visualize_predictions(
 
     cmap, norm = _prepare_colormap()
     rendered: list[Mapping[str, Any]] = []
+    cached_support: dict[str, list[Mapping[str, Any]]] = {}
     for task_index, task_record in enumerate(predictions):
         if max_tasks is not None and task_index >= max_tasks:
             break
@@ -168,6 +224,10 @@ def _visualize_predictions(
         queries = task_record.get("queries", [])
         if not isinstance(queries, Sequence):
             continue
+        task_id_str = str(task_id)
+        if task_id_str not in cached_support:
+            cached_support[task_id_str] = _load_support_examples(processed_dir, task_id_str)
+        support_examples = cached_support[task_id_str]
         for query in list(queries)[: max_queries or None]:
             query_index = int(query.get("query_index", 0))
             input_grid = query.get("input", [])
@@ -176,10 +236,11 @@ def _visualize_predictions(
             title = f"{task_id} / Query {query_index}"
             filename = f"{task_id}_query_{query_index:02d}.png"
             output_path = figures_dir / task_id / filename
-            _render_triplet(
+            _render_task_summary(
                 input_grid,
                 prediction_grid,
                 target_grid,
+                support_examples,
                 title=title,
                 cmap=cmap,
                 norm=norm,
@@ -303,6 +364,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     index_records = _visualize_predictions(
         predictions,
         figures_dir=figures_dir,
+        processed_dir=data_config.processed_dir,
         max_tasks=args.max_visualized_tasks,
         max_queries=args.max_queries_per_task,
         dpi=args.dpi,
