@@ -135,7 +135,9 @@ class InContextEvaluator:
                     width = int(valid_cols.sum().item())
                     prediction_grid = prediction[:height, :width].tolist()
                     target_grid = target[:height, :width].tolist()
-                    input_grid = query_inputs[task_index, query_index, :height, :width].tolist()
+                    # Preserve the full query input to keep visualizations faithful to the
+                    # original problem statement while still cropping predictions/targets.
+                    input_grid = query_inputs[task_index, query_index].tolist()
                 else:
                     prediction_grid = prediction.tolist()
                     target_grid = target.tolist()
