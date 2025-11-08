@@ -117,7 +117,7 @@ created by gemini 2.5 pro
 1. **公式スプリットの取得**：ARC-AGI-2配布物に含まれる `arc-agi_{split}_challenges.json` と `arc-agi_{split}_solutions.json`（`split` は `training`、`evaluation`、`test`）を `data/raw/` に配置する。`test` スプリットには解答が存在しない点に注意する。
 2. **検証タスクIDの固定化**：`validation.jsonl` 内のタスクIDを昇順に並べたリストを生成し、`data/splits/val_tasks.json` として保存する。学習・評価スクリプトではこのリストを読み込み、検証順序とバッチングを固定する。
 3. **メタ適応用テストサブセット**：未見タスクの評価対象として `test.jsonl` から指定数（例：100件）のタスクを抽出する。抽出時はPythonの `random`、`numpy.random`、`torch` にシード `20250214` を設定し、重複なしでサンプリングした結果を `data/splits/meta_eval_test.json` に保存する。
-4. **K-shot例の整形**：各タスクに含まれる学習例ペアを、入出力グリッドの配列とメタデータをまとめた辞書形式に変換し、`data/processed/{task_id}.json` として書き出す。例数がKを超える場合は後述のルールに従いサブサンプリングした上で保存する。
+4. **K-shot例の整形**：各タスクに含まれる学習例ペアを、入出力グリッドの配列とメタデータをまとめた辞書形式に変換し、`data/processed_training-k-shot/{task_id}.json` として書き出す。例数がKを超える場合は後述のルールに従いサブサンプリングした上で保存する。
 5. **処理ログの記録**：前処理スクリプトの実行コマンド、Gitリビジョン、処理日時を `logs/data_preparation.log` に追記し、使用した設定ファイルを `configs/data_prep.yaml` に保持する。
 
 ### K-shot例の選定ルール

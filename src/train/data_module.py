@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence
+from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
 
 import torch
 from torch import Tensor
@@ -128,16 +128,30 @@ class ARCProcessedTaskDataset(Dataset):
         *,
         pad_fill: int,
         target_pad: int,
+        allow_missing_output: bool = False,
     ) -> Mapping[str, Tensor]:
         """Convert raw example payloads into padded tensors."""
 
         inputs: List[Tensor] = []
         outputs: List[Tensor] = []
+        has_output: List[bool] = []
         max_height = 0
         max_width = 0
         for example in examples:
             input_grid = _grid_from_payload(example, key="input")
-            output_grid = _grid_from_payload(example, key="output")
+            output_value = example.get("output")
+            if output_value is None:
+                if not allow_missing_output:
+                    raise KeyError("Example payload is missing 'output'.")
+                output_grid = torch.full(
+                    input_grid.shape,
+                    fill_value=target_pad,
+                    dtype=torch.long,
+                )
+                has_output.append(False)
+            else:
+                output_grid = _grid_from_payload(example, key="output")
+                has_output.append(True)
             inputs.append(input_grid)
             outputs.append(output_grid)
             max_height = max(max_height, input_grid.shape[0], output_grid.shape[0])
@@ -147,12 +161,16 @@ class ARCProcessedTaskDataset(Dataset):
         padded_outputs = _pad_stack(outputs, max_height, max_width, fill_value=target_pad)
         masks = torch.zeros(len(examples), max_height, max_width, dtype=torch.bool)
         for index, output in enumerate(outputs):
-            masks[index, : output.shape[0], : output.shape[1]] = True
-        return {
+            if has_output[index]:
+                masks[index, : output.shape[0], : output.shape[1]] = True
+        payload: Dict[str, Tensor] = {
             "inputs": padded_inputs,
             "outputs": padded_outputs,
             "mask": masks,
         }
+        if allow_missing_output:
+            payload["has_outputs"] = torch.tensor(has_output, dtype=torch.bool)
+        return payload
 
     def __getitem__(self, index: int) -> Mapping[str, object]:  # noqa: D401
         """Load and tensorize a processed task."""
@@ -167,6 +185,7 @@ class ARCProcessedTaskDataset(Dataset):
             record["test_examples"],
             pad_fill=0,
             target_pad=self.ignore_index,
+            allow_missing_output=True,
         )
 
         support_mask = torch.ones(support["inputs"].shape[0], dtype=torch.bool)
@@ -179,6 +198,7 @@ class ARCProcessedTaskDataset(Dataset):
             "query_outputs": query["outputs"],
             "query_mask": query["mask"],
             "metadata": record["metadata"],
+            "query_has_outputs": query.get("has_outputs"),
         }
 
 

@@ -1,5 +1,5 @@
 raw_data_dir: data/raw
-processed_dir: data/processed
+processed_dir: data/processed_training-k-shot
 splits_dir: data/splits
 kshot_indices_dir: data/splits/kshot_indices
 log_file: logs/data_preparation.log

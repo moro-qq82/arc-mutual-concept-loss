@@ -3,7 +3,7 @@
 本ドキュメントは `configs/ablations/` に整理した B0〜B6 の設定内容と、`src/scripts/run_ablations.py` による一括実行手順をまとめる。各設定はベースライン学習に対して特定の要素を切り替え、共有サブスペース正則化および疎オートエンコーダの寄与を評価するために設計している。
 
 ## 実行手順
-1. 必要な前処理（`data/processed/`, `data/splits/` の生成）と学習チェックポイントの配置を完了させる。
+1. 必要な前処理（`data/processed_training-k-shot/`, `data/splits/` の生成）と学習チェックポイントの配置を完了させる。
 2. 任意のシェルから以下のコマンドを実行する。
    ```bash
    python -m src.scripts.run_ablations

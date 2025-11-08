@@ -17,7 +17,7 @@
    - ARC-AGI-2 の JSON ディレクトリ（`training/*.json` など）および JSONL 配布形式の両方からタスクを読み出し、入出力グリッドとメタデータを Python オブジェクトへ変換するローダーを実装。
    - 乱数シード `20250214` を用いた再現性確保。
 2. `src/data/preprocess.py`
-   - K-shot 整形、`data/processed/{task_id}.json` 書き出し、`data/splits/` 配下ファイル生成（`val_tasks.json`, `meta_eval_test.json`, `kshot_indices/`）。
+   - K-shot 整形、`data/processed_training-k-shot/{task_id}.json` 書き出し、`data/splits/` 配下ファイル生成（`val_tasks.json`, `meta_eval_test.json`, `kshot_indices/`）。
    - タスクごとのシードを BLAKE2b で派生させ、K-shot の抽出順を安定化。
    - 実行ログを `logs/data_preparation.log` に追記し、使用設定を `configs/data_prep.yaml` に保持。
 3. ユニットテスト：`tests/test_data_pipeline.py` を作成し、サンプルタスクのロード・整形結果を検証。
