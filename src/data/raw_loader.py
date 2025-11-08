@@ -14,10 +14,10 @@ TASK_LOAD_SEED = 20250214
 
 @dataclass(frozen=True)
 class GridExample:
-    """Single ARC grid example consisting of an input and an output grid."""
+    """Single ARC grid example consisting of an input and an optional output grid."""
 
     input: List[List[int]]
-    output: List[List[int]]
+    output: Optional[List[List[int]]] = None
 
 
 @dataclass(frozen=True)
@@ -30,32 +30,54 @@ class ARCTask:
     metadata: Mapping[str, Any]
 
 
-def _normalize_example(example: Mapping[str, Any]) -> GridExample:
+def _normalize_example(
+    example: Mapping[str, Any],
+    *,
+    allow_missing_output: bool = False,
+) -> GridExample:
     """Validate and normalize a raw example into a :class:`GridExample`."""
 
-    if "input" not in example or "output" not in example:
-        raise ValueError("Each example must contain 'input' and 'output' keys.")
+    if "input" not in example:
+        raise ValueError("Each example must contain an 'input' key.")
+    if "output" not in example and not allow_missing_output:
+        raise ValueError("Each example must contain an 'output' key when outputs are required.")
     input_grid = example["input"]
-    output_grid = example["output"]
+    output_grid = example.get("output")
     if not isinstance(input_grid, list) or not all(isinstance(row, list) for row in input_grid):
         raise TypeError("Example input grid must be a 2D list of integers.")
-    if not isinstance(output_grid, list) or not all(isinstance(row, list) for row in output_grid):
-        raise TypeError("Example output grid must be a 2D list of integers.")
+    if output_grid is None:
+        if not allow_missing_output:
+            raise ValueError("Example output grid is required but missing.")
+    else:
+        if not isinstance(output_grid, list) or not all(isinstance(row, list) for row in output_grid):
+            raise TypeError("Example output grid must be a 2D list of integers.")
     return GridExample(input=input_grid, output=output_grid)
 
 
-def _task_from_dict(task_id: str, payload: Mapping[str, Any], *, source_path: Optional[Path] = None) -> ARCTask:
+def _task_from_dict(
+    task_id: str,
+    payload: Mapping[str, Any],
+    *,
+    source_path: Optional[Path] = None,
+    solution_path: Optional[Path] = None,
+    allow_missing_test_outputs: bool = False,
+) -> ARCTask:
     """Convert a dictionary payload into an :class:`ARCTask`."""
 
     if "train" not in payload or "test" not in payload:
         raise ValueError(f"Task '{task_id}' must include 'train' and 'test' keys.")
     train_examples = [_normalize_example(example) for example in payload["train"]]
-    test_examples = [_normalize_example(example) for example in payload["test"]]
+    test_examples = [
+        _normalize_example(example, allow_missing_output=allow_missing_test_outputs)
+        for example in payload["test"]
+    ]
     metadata: MutableMapping[str, Any] = {}
     if "metadata" in payload and isinstance(payload["metadata"], Mapping):
         metadata.update(payload["metadata"])  # type: ignore[arg-type]
     if source_path is not None:
         metadata.setdefault("source_path", str(source_path))
+    if solution_path is not None:
+        metadata.setdefault("solution_source_path", str(solution_path))
     metadata.setdefault("num_train_examples", len(train_examples))
     metadata.setdefault("num_test_examples", len(test_examples))
     return ARCTask(task_id=task_id, train=train_examples, test=test_examples, metadata=dict(metadata))
@@ -65,6 +87,8 @@ def _normalize_test_examples(
     task_id: str,
     challenge_examples: Iterable[Mapping[str, Any]],
     solutions: Optional[Sequence[List[List[int]]]],
+    *,
+    allow_missing_outputs: bool = False,
 ) -> List[Mapping[str, Any]]:
     """Merge challenge examples with optional solution outputs."""
 
@@ -74,6 +98,11 @@ def _normalize_test_examples(
             normalized.append(example)
             continue
         if solutions is None:
+            if allow_missing_outputs:
+                missing = dict(example)
+                missing.setdefault("output", None)
+                normalized.append(missing)
+                continue
             raise ValueError(
                 f"Task '{task_id}' is missing test outputs and no solutions were provided."
             )
@@ -195,6 +224,8 @@ def _load_challenge_solution_tasks(
     challenge_path: Path,
     solution_path: Optional[Path],
     split: str,
+    *,
+    allow_missing_outputs: bool = False,
 ) -> Dict[str, ARCTask]:
     """Load ARC tasks stored as challenge/solution JSON files."""
 
@@ -219,7 +250,12 @@ def _load_challenge_solution_tasks(
         if not isinstance(challenge_test, list):
             raise TypeError(f"Task '{task_id}' test examples must be provided as a list.")
         solutions = solutions_data.get(task_id) if solutions_data is not None else None
-        payload_dict["test"] = _normalize_test_examples(task_id, challenge_test, solutions)
+        payload_dict["test"] = _normalize_test_examples(
+            task_id,
+            challenge_test,
+            solutions,
+            allow_missing_outputs=allow_missing_outputs,
+        )
 
         metadata = payload_dict.get("metadata")
         if isinstance(metadata, Mapping):
@@ -230,7 +266,13 @@ def _load_challenge_solution_tasks(
         if solution_path is not None and solution_path.is_file():
             payload_dict["metadata"].setdefault("solution_source_path", str(solution_path))
 
-        tasks[task_id] = _task_from_dict(task_id, payload_dict)
+        tasks[task_id] = _task_from_dict(
+            task_id,
+            payload_dict,
+            source_path=challenge_path,
+            solution_path=solution_path if solution_path is not None and solution_path.is_file() else None,
+            allow_missing_test_outputs=allow_missing_outputs,
+        )
     return tasks
 
 
@@ -262,7 +304,13 @@ def _load_jsonl_tasks(jsonl_path: Path, split: str) -> Dict[str, ARCTask]:
     return tasks
 
 
-def load_arc_tasks(raw_data_root: Path | str, split: str, *, seed: int = TASK_LOAD_SEED) -> Dict[str, ARCTask]:
+def load_arc_tasks(
+    raw_data_root: Path | str,
+    split: str,
+    *,
+    seed: int = TASK_LOAD_SEED,
+    allow_incomplete_test: bool = False,
+) -> Dict[str, ARCTask]:
     """Load ARC-AGI-2 tasks for a specific split.
 
     Parameters
@@ -295,7 +343,12 @@ def load_arc_tasks(raw_data_root: Path | str, split: str, *, seed: int = TASK_LO
         if jsonl_path.is_file():
             tasks = _load_jsonl_tasks(jsonl_path, split)
         elif challenge_path.is_file():
-            tasks = _load_challenge_solution_tasks(challenge_path, solution_path, split)
+            tasks = _load_challenge_solution_tasks(
+                challenge_path,
+                solution_path,
+                split,
+                allow_missing_outputs=allow_incomplete_test,
+            )
         elif root_path.is_file() and root_path.suffix == ".jsonl":
             tasks = _load_jsonl_tasks(root_path, split)
         else:

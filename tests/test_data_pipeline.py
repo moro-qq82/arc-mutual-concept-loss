@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from src.data.preprocess import DataPrepConfig, prepare_data_pipeline
+from src.data.preprocess import DataPrepConfig, prepare_data_pipeline, prepare_split
 from src.data.raw_loader import load_arc_tasks
+from src.train.data_module import ARCProcessedTaskDataset
 
 
 @pytest.fixture
@@ -86,6 +87,28 @@ def challenge_solution_list_dataset(tmp_path: Path) -> Path:
         json.dump(challenge_payload, fh)
     with (data_root / "arc-agi_training_solutions.json").open("w", encoding="utf-8") as fh:
         json.dump(solution_payload, fh)
+
+    return data_root
+
+
+@pytest.fixture
+def challenge_without_solutions(tmp_path: Path) -> Path:
+    data_root = tmp_path / "arc_test"
+    data_root.mkdir(parents=True)
+
+    challenge_payload = {
+        "task_test": {
+            "train": [
+                {"input": [[0, 0]], "output": [[1, 1]]},
+            ],
+            "test": [
+                {"input": [[2, 2]]},
+            ],
+        }
+    }
+
+    with (data_root / "arc-agi_test_challenges.json").open("w", encoding="utf-8") as fh:
+        json.dump(challenge_payload, fh)
 
     return data_root
 
@@ -186,3 +209,26 @@ def test_prepare_pipeline_handles_insufficient_train(
     kshot_file = config.kshot_indices_dir / "task_c.json"
     indices = json.loads(kshot_file.read_text(encoding="utf-8"))
     assert indices["indices"] == [0, 1]
+
+
+def test_prepare_split_handles_missing_outputs(
+    tmp_path: Path, challenge_without_solutions: Path
+) -> None:
+    output_dir = tmp_path / "processed_test"
+    task_ids = prepare_split(
+        challenge_without_solutions,
+        "test",
+        output_dir,
+        allow_incomplete_test=True,
+    )
+    assert task_ids == ["task_test"]
+
+    processed_file = output_dir / "task_test.json"
+    payload = json.loads(processed_file.read_text(encoding="utf-8"))
+    assert payload["metadata"]["has_ground_truth"] is False
+    assert payload["test_examples"][0]["output"] is None
+
+    dataset = ARCProcessedTaskDataset(output_dir, task_ids, ignore_index=-99)
+    sample = dataset[0]
+    assert sample["query_outputs"].eq(-99).all()
+    assert sample["query_mask"].sum() == 0

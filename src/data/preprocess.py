@@ -83,10 +83,15 @@ def _task_specific_seed(global_seed: int, task_id: str) -> int:
     return (global_seed + offset) % (2**32)
 
 
-def _grid_example_to_dict(example: GridExample) -> Dict[str, List[List[int]]]:
+def _grid_example_to_dict(example: GridExample) -> Dict[str, List[List[int]] | None]:
     """Convert a :class:`GridExample` dataclass to a JSON-serializable dictionary."""
 
-    return {"input": example.input, "output": example.output}
+    payload: Dict[str, List[List[int]] | None] = {"input": example.input}
+    if example.output is not None:
+        payload["output"] = example.output
+    else:
+        payload["output"] = None
+    return payload
 
 
 def _write_json(path: Path, payload: Mapping[str, object]) -> None:
@@ -118,11 +123,14 @@ def _summarize_task(task: ARCTask, k_indices: Sequence[int]) -> Mapping[str, obj
 
     k_examples = [_grid_example_to_dict(task.train[index]) for index in k_indices]
     test_examples = [_grid_example_to_dict(example) for example in task.test]
+    has_ground_truth = all(example.output is not None for example in task.test)
+    metadata = dict(task.metadata)
+    metadata.setdefault("has_ground_truth", has_ground_truth)
     return {
         "task_id": task.task_id,
         "k_shot_examples": k_examples,
         "test_examples": test_examples,
-        "metadata": dict(task.metadata),
+        "metadata": metadata,
     }
 
 
@@ -171,6 +179,38 @@ def prepare_data_pipeline(config: DataPrepConfig) -> Dict[str, List[str]]:
         "validation_tasks": validation_ids,
         "meta_eval_tasks": sorted(meta_tasks.keys()),
     }
+
+
+def prepare_split(
+    raw_data_dir: Path,
+    split: str,
+    output_dir: Path,
+    *,
+    k_shot: int | None = None,
+    seed: int = 20250214,
+    allow_incomplete_test: bool = False,
+) -> list[str]:
+    """Process a specific ARC split into the standard JSON format."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    tasks = load_arc_tasks(
+        raw_data_dir,
+        split,
+        seed=seed,
+        allow_incomplete_test=allow_incomplete_test,
+    )
+    task_ids: list[str] = []
+    for task in tasks.values():
+        if k_shot is None:
+            k_indices = list(range(len(task.train)))
+        else:
+            seed_value = _task_specific_seed(seed, task.task_id)
+            k_indices = _select_k_indices(len(task.train), k_shot, seed_value)
+        processed_payload = _summarize_task(task, k_indices)
+        processed_path = output_dir / f"{task.task_id}.json"
+        _write_json(processed_path, processed_payload)
+        task_ids.append(task.task_id)
+    return task_ids
 
 
 def _load_config(path: Path) -> DataPrepConfig:

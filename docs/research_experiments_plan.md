@@ -31,7 +31,7 @@
    - 検証タスクIDリストを生成し `data/splits/val_tasks.json` として保存。
    - メタ適応評価用のタスクサンプルを `data/splits/meta_eval_test.json` に作成。サンプリングは固定シードで一度だけ実施し、実行スクリプトを `configs/data_prep.yaml` で参照する。
 3. **K-shot整形処理**
-   - `src/data/` 以下の前処理スクリプトを用いて各タスクを辞書形式に整形し、`data/processed/{task_id}.json` に保存。
+   - `src/data/` 以下の前処理スクリプトを用いて各タスクを辞書形式に整形し、`data/processed_training-k-shot/{task_id}.json` に保存。
    - 例数がKを超える場合はサンプリングされたインデックスを `data/splits/kshot_indices/{task_id}.json` に記録して再利用する。
 4. **検証・ログ出力**
    - 前処理後に基本統計（例数分布、グリッドサイズ）を `reports/data_summary.md` に追記。
@@ -60,7 +60,7 @@
      ```bash
      python -m src.train.run \
        --config configs/train/baseline.yaml \
-       --data-root data/processed \
+       --data-root data/processed_training-k-shot \
        --output-dir reports/experiments/EXP-YYYYMMDD-xx
      ```
    - 進捗はTensorBoardまたは独自ロギング (`logs/`) で追跡。GPU利用率などは `nvidia-smi` ログを適宜保存する。

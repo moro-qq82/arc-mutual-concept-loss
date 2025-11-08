@@ -2,7 +2,7 @@
 seed: 20250214
 
 data:
-  processed_dir: data/processed
+  processed_dir: data/processed_training-k-shot
   splits_dir: data/splits
   batch_size: 4
   num_workers: 4

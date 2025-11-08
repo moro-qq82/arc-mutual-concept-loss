@@ -13,7 +13,7 @@ ARC Mutual Concept Loss は、Abstraction and Reasoning Corpus (ARC) の拡張�
 
 ## ディレクトリ構成
 - `configs/` : トレーニング・評価・メタ適応・アブレーション実験の YAML 設定ファイル。
-- `data/` : `raw/` に ARC-AGI-2 の JSON を配置し、`processed/`・`splits/` に前処理結果が生成されます。
+- `data/` : `raw/` に ARC-AGI-2 の JSON を配置し、`processed_training-k-shot/`・`processed_evaluation/`・`processed_test/`・`splits/` に前処理結果が生成されます。
 - `docs/` : 実験計画、所見、アブレーション結果のまとめなど研究ドキュメント。
 - `reports/` : トレーニング履歴や評価指標を JSON/画像で保存する出力先。
 - `src/` : 主要な Python 実装。`data/` (前処理)、`train/` (データローダ・損失・トレーナ)、`models/` (ARC in-context モデル)、`losses/` (mutual concept loss 構成要素)、`analysis/` (表現解析)、`scripts/` (CLI エントリポイント) などで構成されています。
@@ -51,10 +51,16 @@ ARC Mutual Concept Loss は、Abstraction and Reasoning Corpus (ARC) の拡張�
    ```bash
    python -m src.data.preprocess --config configs/data_prep.yaml
    ```
-   - `data/processed/` にタスク単位の JSON (k-shot 例・テスト例・メタデータ) が生成されます。
+   - `data/processed_training-k-shot/` にタスク単位の JSON (k-shot 例・テスト例・メタデータ) が生成されます。
    - `data/splits/` に学習/検証/メタ評価タスクのリストが保存されます。
    - 実行ログは `logs/data_preparation.log` に追記されます。
-3. `configs/data_prep.yaml` を編集することで、k-shot 数や検証データ比率、ランダムシードなどを調整できます。
+3. 評価・テスト用タスクも含めた前処理済みデータを生成する場合は、以下のユーティリティで各分割を一括生成できます。
+   ```bash
+   python -m src.scripts.prepare_all_splits --raw-data-dir data/raw
+   ```
+   - 既定では `data/processed_training-k-shot/`・`data/processed_evaluation/`・`data/processed_test/` が再生成されます。
+   - `--k-shot` や `--seed` を指定すると学習タスクのサブサンプリング条件を調整できます。
+4. `configs/data_prep.yaml` を編集することで、k-shot 数や検証データ比率、ランダムシードなどを調整できます。
 
 ## 学習・評価ワークフロー
 ### トレーニング (アブレーション実験スイート)

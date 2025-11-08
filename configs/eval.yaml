@@ -1,7 +1,7 @@
 # 評価設定
 
 data:
-  processed_dir: data/processed
+  processed_dir: data/processed_evaluation
   splits_dir: data/splits
   batch_size: 2
   num_workers: 2
