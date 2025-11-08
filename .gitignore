@@ -4,4 +4,4 @@ personal_note.md
 .vscode/
 logs/
 checkpoints/ablations/
-
+reports/ic_eval/figures/
