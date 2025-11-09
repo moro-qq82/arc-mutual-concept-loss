@@ -1,7 +1,5 @@
 - ARC-AGI-2データはtraining, evaluationが分かれているのに、データ前処理でk-shot対応の分割をする前提になっている
   - データ分割前提であるため、run_eval.pyやrun_eval_with_visualization.pyで分割していないevaluationデータを使うことができない
-  - 今のスクリプトでevaluationデータを処理できるようにするため、data/processedのデータについて、以下のように処理できる前処理スクリプトが必要
-    - data/processed_training-k-shot
-    - data/processed_evaluation
-    - data/processed_test
+  - 今のスクリプトでevaluationデータを処理できるようにするため、data/splitsの中のtrainingから分割したval_tasks.jsonを参照せずに、直接evaluationの中身を参照するようにしたい
+  - これをしないとrun_eval_with_visualizationを実行した際に、evaluationデータを処理したいのに、trainingデータから分割したval_tasks.jsonしか参照できず、中身が合わないというエラーが出てしまう
     

@@ -6,4 +6,4 @@ log_file: logs/data_preparation.log
 k_shot: 3
 val_fraction: 0.1
 seed: 20250214
-meta_eval_split: training
+meta_eval_split: evaluation
