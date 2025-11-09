@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
+from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _pad_grid(grid: Tensor, height: int, width: int, *, fill_value: int) -> Tensor:
@@ -274,6 +277,30 @@ class ARCDataModule:
         self._val_dataset: Optional[ARCProcessedTaskDataset] = None
         self._test_dataset: Optional[ARCProcessedTaskDataset] = None
 
+    def _filter_split_ids(
+        self,
+        candidate_ids: Sequence[str],
+        available_ids: Set[str],
+        *,
+        split_name: str,
+    ) -> List[str]:
+        """Filter ``candidate_ids`` to those available in ``processed_dir``."""
+
+        filtered = [task_id for task_id in candidate_ids if task_id in available_ids]
+        missing = sorted({task_id for task_id in candidate_ids if task_id not in available_ids})
+        if missing:
+            preview = ", ".join(missing[:3])
+            if len(missing) > 3:
+                preview = f"{preview}, …"
+            LOGGER.warning(
+                "Split file '%s' references %d task(s) absent from %s; they will be ignored: %s",
+                split_name,
+                len(missing),
+                self.config.processed_dir,
+                preview,
+            )
+        return filtered
+
     def _load_split_ids(self, filename: str) -> List[str]:
         """Read a split definition file returning a list of task identifiers."""
 
@@ -291,13 +318,23 @@ class ARCDataModule:
     def setup(self, stage: Optional[str] = None) -> None:
         """Create datasets for the requested stage."""
 
+        self._train_dataset = None
+        self._val_dataset = None
+        self._test_dataset = None
+
         processed_files = sorted(self.config.processed_dir.glob("*.json"))
         all_ids = [path.stem for path in processed_files]
         if not all_ids:
             raise RuntimeError(f"No processed tasks found in {self.config.processed_dir}.")
 
-        val_ids = set(self._load_split_ids("val_tasks.json"))
-        test_ids = set(self._load_split_ids("meta_eval_test.json"))
+        available_ids = set(all_ids)
+        raw_val_ids = self._load_split_ids("val_tasks.json")
+        filtered_val_ids = self._filter_split_ids(raw_val_ids, available_ids, split_name="val_tasks.json")
+        val_ids = set(filtered_val_ids)
+
+        raw_test_ids = self._load_split_ids("meta_eval_test.json")
+        filtered_test_ids = self._filter_split_ids(raw_test_ids, available_ids, split_name="meta_eval_test.json")
+        test_ids = set(filtered_test_ids)
 
         if stage in (None, "fit"):
             train_ids = [task_id for task_id in all_ids if task_id not in val_ids]
