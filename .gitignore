@@ -5,3 +5,8 @@ personal_note.md
 logs/
 checkpoints/ablations/
 reports/ic_eval/figures/
+data/processed/
+data/processed_evaluation/
+data/processed_test/
+data/processed_training-k-shot/
+
