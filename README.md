@@ -77,6 +77,11 @@ python -m src.scripts.run_ablations --configs-dir configs/ablations --summary-pa
 python -m src.scripts.run_eval --config configs/eval.yaml
 ```
 - 指定した分割 (デフォルトでは検証またはメタ評価) に対する正解率などの指標を標準出力と `reports/eval/` 以下の JSON に保存します。
+ 
+分割ファイルを使わず「評価用の前処理済みデータ (例: `data/processed_evaluation/`) をそのまま全件評価したい」場合は、`--task-source evaluation` を指定してください。`configs/eval.yaml` の `data.processed_dir` にある全タスクを列挙して評価します。
+```bash
+python -m src.scripts.run_eval --config configs/eval.yaml --task-source evaluation
+```
 
 ### 評価結果の可視化と予測エクスポート
 推論結果を JSON と画像で保存したい場合は、以下の可視化付きスクリプトを利用してください。
@@ -89,6 +94,16 @@ python -m src.scripts.run_eval_with_visualization \
 - `--predictions-dir` に指定したディレクトリへタスク別の予測 JSON (`predictions_*.json`) が保存されます。
 - `--figures-dir` にはタスクごとのサブディレクトリが作成され、クエリ入力・モデル予測・正解の 3 枚を並べた PNG が出力されます。
 - `visualization_index.json` に、保存された指標値と画像パスの一覧が記録されます。`--max-visualized-tasks` や `--max-queries-per-task` で可視化数を絞ることも可能です。
+
+分割ファイルを使わず評価用データを直接全件可視化する場合は、同様に `--task-source evaluation` を指定します。
+```bash
+python -m src.scripts.run_eval_with_visualization \
+   --config configs/eval.yaml \
+   --task-source evaluation \
+   --predictions-dir reports/ic_eval/predictions \
+   --figures-dir reports/ic_eval/figures
+```
+ヘッドレス環境でも画像保存できるよう、スクリプト内で `matplotlib` のバックエンドは自動的に非表示描画 (Agg) に設定されます。
 
 ### テストチャレンジへの推論と提出ファイル生成
 ARC-AGI テストチャレンジ (`data/raw/arc-agi_test_challenges.json`) を入力に、提出用の `submission.json` を作成する場合は次のスクリプトを利用します。

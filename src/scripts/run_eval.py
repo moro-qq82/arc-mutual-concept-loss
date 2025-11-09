@@ -9,10 +9,16 @@ from typing import Any, Dict
 
 import torch
 import yaml
+from torch.utils.data import DataLoader
 
 from src.eval.ic_evaluator import EvaluationConfig, InContextEvaluator
 from src.models.ic_model import ARCInContextModel
-from src.train.data_module import ARCDataModule, ARCDataModuleConfig
+from src.train.data_module import (
+    ARCDataModule,
+    ARCDataModuleConfig,
+    ARCProcessedTaskDataset,
+)
+from src.train.data_module import _collate_tasks  # type: ignore
 
 
 def _load_yaml(path: Path) -> Dict[str, Any]:
@@ -54,6 +60,15 @@ def main(argv: list[str] | None = None) -> None:
         default=Path("configs/eval.yaml"),
         help="Path to the evaluation YAML configuration file.",
     )
+    parser.add_argument(
+        "--task-source",
+        choices=["split", "evaluation"],
+        default="split",
+        help=(
+            "Task source selection: 'split' uses data/splits (val/meta_eval),"
+            " 'evaluation' enumerates all tasks under data.processed_dir."
+        ),
+    )
     args = parser.parse_args(argv)
 
     config_payload = _load_yaml(args.config)
@@ -61,11 +76,31 @@ def main(argv: list[str] | None = None) -> None:
         raise KeyError("Evaluation configuration must contain a 'data' section.")
 
     data_config = ARCDataModuleConfig.from_mapping(config_payload["data"])
-    module = ARCDataModule(data_config)
-    module.setup(None)
-
     eval_config = EvaluationConfig.from_mapping(config_payload.get("evaluation", {}))
-    dataloader = _select_dataloader(module, eval_config.split)
+    if args.task_source == "evaluation":
+        all_paths = sorted(data_config.processed_dir.glob("*.json"))
+        if not all_paths:
+            raise RuntimeError(f"No processed tasks found in {data_config.processed_dir}.")
+        all_ids = [p.stem for p in all_paths]
+        dataset = ARCProcessedTaskDataset(
+            data_config.processed_dir,
+            all_ids,
+            ignore_index=data_config.ignore_index,
+        )
+        dataloader = DataLoader(
+            dataset,
+            batch_size=data_config.batch_size,
+            shuffle=False,
+            num_workers=data_config.num_workers,
+            pin_memory=data_config.pin_memory,
+            persistent_workers=data_config.persistent_workers and data_config.num_workers > 0,
+            drop_last=False,
+            collate_fn=lambda batch: _collate_tasks(batch, ignore_index=data_config.ignore_index),
+        )
+    else:
+        module = ARCDataModule(data_config)
+        module.setup(None)
+        dataloader = _select_dataloader(module, eval_config.split)
 
     model_kwargs = dict(eval_config.model_kwargs)
     model = ARCInContextModel(**model_kwargs)
