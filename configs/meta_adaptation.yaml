@@ -1,7 +1,7 @@
 # few-shotメタ適応の実行設定
 
 data:
-  processed_dir: data/processed_training-k-shot
+  processed_dir: data/processed_evaluation
   splits_dir: data/splits
   batch_size: 1
   num_workers: 0

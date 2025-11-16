@@ -18,6 +18,9 @@ train:
 meta_adaptation:
   base_config: configs/meta_adaptation.yaml
   overrides:
+    data:
+      processed_dir: data/processed_evaluation
+      splits_dir: data/splits
     adapter:
       mode: adapter
       bottleneck_dim: 256
